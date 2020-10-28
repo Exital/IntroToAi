@@ -1,4 +1,5 @@
 from functools import reduce
+from partB import *
 
 if __name__ == "__main__":
     print("hello world")
@@ -80,6 +81,7 @@ def magicNumLast(x):
 
 magicNumLast(6)
 
+
 def magicNum(x):
     return x == reduce((lambda m, n: m + n), list(filter(lambda y: x % y == 0, list(range(1, x)))))
 
@@ -92,3 +94,20 @@ print(p)
 m = [x for x in range(1,6)]
 m_res = list(map(lambda x: x**2, m))
 print(m_res)
+
+"""
+6 and 28 are magic numbers as you can see
+"""
+filtered = filter(magicNum, range(2,100))
+for a in filtered:
+    print(a)
+
+"""
+and also that way
+"""
+print([x for x in range(2,100) if magicNum(x)])
+
+
+"You can see that I have created a class for point"
+y = Point(3, 5)
+y.show()
