@@ -69,3 +69,26 @@ def sum(lst):
 
 print(sum([1,3,3]))
 
+with open('./task9.txt','w') as f:
+    f.write('I know how to write')
+
+def magicNumLast(x):
+    lst = list(range(1,x))
+    p = filter(lambda x: x%2 == 0, lst)
+    for num in p:
+        print(num)
+
+magicNumLast(6)
+
+def magicNum(x):
+    return x == reduce((lambda m, n: m + n), list(filter(lambda y: x % y == 0, list(range(1, x)))))
+
+print(magicNum(12))
+
+p = [x for x in range(1,101)]
+
+print(p)
+
+m = [x for x in range(1,6)]
+m_res = list(map(lambda x: x**2, m))
+print(m_res)
