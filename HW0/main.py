@@ -1,5 +1,6 @@
 from functools import reduce
 from partB import *
+import random
 
 if __name__ == "__main__":
     print("hello world")
@@ -85,7 +86,7 @@ magicNumLast(6)
 def magicNum(x):
     return x == reduce((lambda m, n: m + n), list(filter(lambda y: x % y == 0, list(range(1, x)))))
 
-print(magicNum(12))
+print(magicNum(6))
 
 p = [x for x in range(1,101)]
 
@@ -111,3 +112,17 @@ print([x for x in range(2,100) if magicNum(x)])
 "You can see that I have created a class for point"
 y = Point(3, 5)
 y.show()
+
+w = Point()
+w.show()
+
+def randomNum(x):
+    random_num = random.randint(1, 1000)
+    if random_num > x:
+        return 0
+    else:
+        return random_num
+
+
+res = randomNum(300)
+print(res)
