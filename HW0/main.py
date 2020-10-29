@@ -1,7 +1,7 @@
 from functools import reduce
 from partB import *
 import random
-
+from re import *
 if __name__ == "__main__":
     print("hello world")
 
@@ -113,8 +113,11 @@ print([x for x in range(2,100) if magicNum(x)])
 y = Point(3, 5)
 y.show()
 
+print(y)
+
 w = Point()
 w.show()
+
 
 def randomNum(x):
     random_num = random.randint(1, 1000)
@@ -126,3 +129,32 @@ def randomNum(x):
 
 res = randomNum(300)
 print(res)
+
+
+def tasksix(lst, num):
+    new_lst = []
+    copy_lst = lst
+    if num == 0:
+        return []
+    else:
+        for i in range(0,num):
+            chosen = random.choice(copy_lst)
+            copy_lst.remove(chosen)
+            new_lst.append(chosen)
+    return new_lst
+
+
+print(tasksix(list(range(1,11)), 4))
+
+
+def sumboth(s):
+    sub = str(s).split(".")
+    first_num = sub[0]
+    sec_num = sub[1]
+    if first_num.isalpha():
+        raise ValueError("Dont insert letters you son of a bitch!")
+    return int(first_num) + int(sec_num)
+
+
+print(sumboth("-10.11"))
+
