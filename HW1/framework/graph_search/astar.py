@@ -49,8 +49,9 @@ class AStar(BestFirstSearch):
         Remember: In Weighted-A* the f-score is defined by ((1-w) * cost) + (w * h(state)).
         Notice: You may use `search_node.g_cost`, `self.heuristic_weight`, and `self.heuristic_function`.
         """
-
-        raise NotImplementedError  # TODO: remove this line!
+        heuristic_val = self.heuristic_weight * self.heuristic_function.estimate(search_node.state)
+        cost_val = (1 - self.heuristic_weight) * search_node.g_cost
+        return heuristic_val + cost_val
 
     def _open_successor_node(self, problem: GraphProblem, successor_node: SearchNode):
         """
@@ -71,5 +72,21 @@ class AStar(BestFirstSearch):
         Remember: In A*, in contrast to uniform-cost, a successor state might have an already closed node,
                   but still could be improved.
         """
-
-        raise NotImplementedError  # TODO: remove this line!
+        new_g = successor_node.parent_search_node.g_cost + successor_node.operator_cost
+        old_node = self.open.get_node_by_state(successor_node.state)
+        if old_node is not None:
+            if new_g < old_node.g_cost:
+                old_node.cost = new_g
+                old_node.parent_search_node = successor_node.parent_search_node
+                old_node.expanding_priority = self._calc_node_expanding_priority(old_node)
+        else:
+            old_node = self.close.get_node_by_state(successor_node.state)
+            if old_node is not None:
+                if new_g < old_node.g_cost:
+                    old_node.cost = new_g
+                    old_node.parent_search_node = successor_node.parent_search_node
+                    old_node.expanding_priority = self._calc_node_expanding_priority(old_node)
+                    self.close.remove_node(old_node)
+                    self.open.push_node(old_node)
+            else:
+                self.open.push_node(successor_node)
