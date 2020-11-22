@@ -97,10 +97,10 @@ def run_astar_for_weights_in_range(heuristic_type: HeuristicFunctionType, proble
     plot_distance_and_expanded_wrt_weight_figure("Run AStar for weights in range", weight_list, g_cost_list, expand_list)
 
 
-
 # --------------------------------------------------------------------
 # ------------------------ StreetsMap Problem ------------------------
 # --------------------------------------------------------------------
+
 
 def toy_map_problem_experiments():
     print()
@@ -139,7 +139,6 @@ def toy_map_problem_experiments():
     #  3. Call here the function `run_astar_for_weights_in_range()`
     #     with `AirDistHeuristic` and `toy_map_problem`.
     run_astar_for_weights_in_range(AirDistHeuristic, toy_map_problem)
-    exit()  # TODO: remove!
 
 
 # --------------------------------------------------------------------
@@ -176,7 +175,9 @@ def basic_mda_problem_experiments():
     # Ex.18
     # TODO: create an instance of `UniformCost`, solve the `small_mda_problem_with_distance_cost`
     #       with it and print the results.
-    exit()  # TODO: remove!
+    uc = UniformCost()
+    res = uc.solve_problem(small_mda_problem_with_distance_cost)
+    print(res)
 
 
 def mda_problem_with_astar_experiments():
