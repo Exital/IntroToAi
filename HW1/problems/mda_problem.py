@@ -281,10 +281,11 @@ class MDAProblem(GraphProblem):
         if distance_cost is None:
             infinity = float('inf')
             return MDACost(infinity, infinity, infinity, self.optimization_objective)
+
         else:
             # fridge gas consumption
             ambulance = self.problem_input.ambulance
-            test_number = sum([apt.nr_roommates for apt in succ_state.tests_on_ambulance])
+            test_number = sum([apt.nr_roommates for apt in prev_state.tests_on_ambulance])
             active_fridges = math.ceil(test_number / ambulance.fridge_capacity)
             fridges_gas_consumption = sum(ambulance.fridges_gas_consumption_liter_per_meter[:active_fridges])
             # lab payments
@@ -296,7 +297,7 @@ class MDAProblem(GraphProblem):
                     lab_payment += succ_state.current_site.tests_transfer_cost
             gas_price = self.problem_input.gas_liter_price
             gas_consumption = ambulance.drive_gas_consumption_liter_per_meter + fridges_gas_consumption
-            monetary_cost = lab_payment + gas_price * distance_cost * gas_consumption
+            monetary_cost = lab_payment + (gas_price * distance_cost * gas_consumption)
             # test travel cost
             test_travel_cost = distance_cost * test_number
         return MDACost(distance_cost, monetary_cost, test_travel_cost, self.optimization_objective)

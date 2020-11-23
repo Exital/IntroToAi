@@ -94,7 +94,20 @@ class MDASumAirDistHeuristic(HeuristicFunction):
         if len(all_certain_junctions_in_remaining_ambulance_path) < 2:
             return 0
 
-        raise NotImplementedError  # TODO: remove this line and complete the missing part here!
+        dist_func = self.cached_air_distance_calculator.get_air_distance_between_junctions
+        remaining = all_certain_junctions_in_remaining_ambulance_path
+
+        ret = 0.0
+        curr = state.current_location
+        remaining.remove(curr)
+        while remaining:
+            dis_list = [(junction, dist_func(curr, junction)) for junction in remaining if junction != curr]
+            (min_junc, min_path) = sorted(dis_list, key=lambda x: x[1])[0]
+            ret += min_path
+            if curr != min_junc:
+                curr = min_junc
+                remaining.remove(curr)
+        return ret
 
 
 class MDAMSTAirDistHeuristic(HeuristicFunction):
@@ -132,7 +145,13 @@ class MDAMSTAirDistHeuristic(HeuristicFunction):
               Use `nx.minimum_spanning_tree()` to get an MST. Calculate the MST size using the method
               `.size(weight='weight')`. Do not manually sum the edges' weights.
         """
-        raise NotImplementedError  # TODO: remove this line!
+        graph = nx.Graph()
+        for j1 in junctions:
+            for j2 in junctions:
+                if j1 != j2 and not graph.has_edge(j1, j1):
+                    graph.add_weighted_edges_from([(j1, j2, self.cached_air_distance_calculator
+                                                .get_air_distance_between_junctions(j1, j2))])
+        return nx.minimum_spanning_tree(graph).size(weight='weight')
 
 
 class MDATestsTravelDistToNearestLabHeuristic(HeuristicFunction):
@@ -162,10 +181,21 @@ class MDATestsTravelDistToNearestLabHeuristic(HeuristicFunction):
         assert isinstance(self.problem, MDAProblem)
         assert isinstance(state, MDAState)
 
+        prob_input = self.problem.problem_input
+
         def air_dist_to_closest_lab(junction: Junction) -> float:
             """
             Returns the distance between `junction` and the laboratory that is closest to `junction`.
             """
-            return min(...)  # TODO: replace `...` with the relevant implementation.
+            calc_min_dist = self.cached_air_distance_calculator.get_air_distance_between_junctions
+            return min(calc_min_dist(junction, lab.location) for lab in prob_input.laboratories)
 
-        raise NotImplementedError  # TODO: remove this line!
+        ret = 0.0
+        # tests on ambulance
+        if state.tests_on_ambulance:
+            ret += air_dist_to_closest_lab(
+                state.current_location) * state.get_total_nr_tests_taken_and_stored_on_ambulance()
+        # tests waiting to be picked up
+        ret += sum(air_dist_to_closest_lab(apartment.location) * apartment.nr_roommates
+                   for apartment in self.problem.get_reported_apartments_waiting_to_visit(state))
+        return ret
