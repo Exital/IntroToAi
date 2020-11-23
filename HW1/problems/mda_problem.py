@@ -244,7 +244,7 @@ class MDAProblem(GraphProblem):
                                            visited_labs=state_to_expand.visited_labs | frozenset({lab}))
                 yield OperatorResult(successor_state=successor_state,
                                      operator_cost=self.get_operator_cost(state_to_expand, successor_state),
-                                     operator_name="go to lab {}".format(lab.name))
+                                     operator_name="go to lab {0}".format(lab.name))
 
     def get_operator_cost(self, prev_state: MDAState, succ_state: MDAState) -> MDACost:
         """
@@ -353,4 +353,7 @@ class MDAProblem(GraphProblem):
             Use the method `self.get_reported_apartments_waiting_to_visit(state)`.
             Use python's `sorted(some_list, key=...)` function.
         """
-        raise NotImplementedError  # TODO: remove this line!
+        waiting_to_visit = self.get_reported_apartments_waiting_to_visit(state)
+        apartment_list = [apt.location for apt in waiting_to_visit]
+        apartment_list.append(state.current_location)
+        return sorted(apartment_list, key=lambda j: j.index)
