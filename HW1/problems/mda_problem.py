@@ -216,31 +216,32 @@ class MDAProblem(GraphProblem):
             - Python's sets union operation (`some_set_or_frozenset | some_other_set_or_frozenset`).
         """
         assert isinstance(state_to_expand, MDAState)
+        num_matoshim = state_to_expand.nr_matoshim_on_ambulance
+        tests_on_ambulance = state_to_expand.get_total_nr_tests_taken_and_stored_on_ambulance()
+        fridges_capacity = self.problem_input.ambulance.total_fridges_capacity
         # yield any apratment that can be visited
         for apartment in self.get_reported_apartments_waiting_to_visit(state_to_expand):
-            if state_to_expand.nr_matoshim_on_ambulance >= apartment.nr_roommates:
-                if self.problem_input.ambulance.total_fridges_capacity \
-                        - state_to_expand.get_total_nr_tests_taken_and_stored_on_ambulance() >= apartment.nr_roommates:
-                    state = MDAState(apartment, state_to_expand.tests_on_ambulance |
-                                     frozenset({apartment}),
-                                     state_to_expand.tests_transferred_to_lab,
-                                     state_to_expand.nr_matoshim_on_ambulance - apartment.nr_roommates,
-                                     state_to_expand.visited_labs)
+            roomates = apartment.nr_roommates
+            if (num_matoshim >= roomates) and (fridges_capacity - tests_on_ambulance >= roomates):
+                state = MDAState(apartment, state_to_expand.tests_on_ambulance |
+                                 frozenset({apartment}),
+                                 state_to_expand.tests_transferred_to_lab,
+                                 num_matoshim - roomates,
+                                 state_to_expand.visited_labs)
 
-                    cost = self.get_operator_cost(state_to_expand, state)
-                    yield OperatorResult(successor_state=state, operator_cost=cost,
-                                         operator_name="visit {0}".format(apartment.reporter_name))
-        # yield any lab that can be visited
+                cost = self.get_operator_cost(state_to_expand, state)
+                yield OperatorResult(successor_state=state, operator_cost=cost,
+                                     operator_name="visit {0}".format(apartment.reporter_name))
+        # yield labs to visit
         for lab in self.problem_input.laboratories:
             lab_in_visited_labs = lab in state_to_expand.visited_labs
-            if state_to_expand.get_total_nr_tests_taken_and_stored_on_ambulance() \
-                    or not lab_in_visited_labs:
+            if tests_on_ambulance or not lab_in_visited_labs:
                 matoshim = (not lab_in_visited_labs) * lab.max_nr_matoshim
                 successor_state = MDAState(current_site=lab,
                                            tests_on_ambulance=frozenset({}),
                                            tests_transferred_to_lab=state_to_expand.tests_transferred_to_lab
                                                                     | state_to_expand.tests_on_ambulance,
-                                           nr_matoshim_on_ambulance=state_to_expand.nr_matoshim_on_ambulance + matoshim,
+                                           nr_matoshim_on_ambulance=num_matoshim + matoshim,
                                            visited_labs=state_to_expand.visited_labs | frozenset({lab}))
                 yield OperatorResult(successor_state=successor_state,
                                      operator_cost=self.get_operator_cost(state_to_expand, successor_state),
