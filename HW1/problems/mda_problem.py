@@ -292,9 +292,9 @@ class MDAProblem(GraphProblem):
             # lab payments
             lab_payment = 0
             if isinstance(succ_state.current_site, Laboratory):
-                if succ_state.current_site.lab_id in succ_state.visited_labs:
+                if succ_state.current_site in prev_state.visited_labs:
                     lab_payment += succ_state.current_site.revisit_extra_cost
-                if succ_state.tests_on_ambulance:
+                if prev_state.get_total_nr_tests_taken_and_stored_on_ambulance():
                     lab_payment += succ_state.current_site.tests_transfer_cost
             gas_price = self.problem_input.gas_liter_price
             gas_consumption = ambulance.drive_gas_consumption_liter_per_meter + fridges_gas_consumption
