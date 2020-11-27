@@ -26,25 +26,18 @@ def sec_to(sec, to):
         return mil
 
 
-def calc_time(k,m, time):
-    routes_per_sec = (pow(2,30)) / (100*(k+m))
-    num_routes = math.factorial(k) * pow((m+1),(k)) * m
-    scientific_notation = "{:e}".format(num_routes)
-    seconds = num_routes / routes_per_sec
-    print(f"K={k}, M={m}")
-    print(f"Number of routes is {scientific_notation}")
-    print(f"time in {time} is {sec_to(seconds, time)}")
+def calc_time(args):
+    for k, m, time in args:
+        routes_per_sec = (pow(2,30)) / (100*(k+m))
+        num_routes = math.factorial(k) * pow((m+1),(k)) * m
+        scientific_notation = "{:e}".format(num_routes)
+        seconds = num_routes / routes_per_sec
+        print(f"K={k}, M={m}")
+        print(f"Number of routes is {scientific_notation}")
+        print(f"time in {time} is {sec_to(seconds, time)}")
     
+args = [(7,2,"seconds"),(7,3,"minutes"),(8,3,"hours"),(8,4,"hours"),(9,3,"days"),(10,3,"months"),(11,3,"years"),(12,3,"thousand years"),(12,4,"thousand years"),(13,4,"million years")]
 
-calc_time(7,2, "seconds")
-calc_time(7,3, "minutes")
-calc_time(8,3, "hours")
-calc_time(8,4, "hours")
-calc_time(9,3, "days")
-calc_time(10,3, "months")
-calc_time(11,3, "years")
-calc_time(12,3, "thousand years")
-calc_time(12,4, "thousand years")
-calc_time(13,4, "million years")
+calc_time(args)
 
 
