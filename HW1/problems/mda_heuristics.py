@@ -102,7 +102,7 @@ class MDASumAirDistHeuristic(HeuristicFunction):
         remaining.remove(curr)
         while remaining:
             dis_list = [(junction, dist_func(curr, junction)) for junction in remaining if junction != curr]
-            (min_junc, min_path) = sorted(dis_list, key=lambda x: x[1])[0]
+            (min_junc, min_path) = sorted(dis_list, key=lambda x: (x[1], x[0].index))[0]
             ret += min_path
             if curr != min_junc:
                 curr = min_junc
