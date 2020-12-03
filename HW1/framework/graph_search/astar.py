@@ -74,13 +74,13 @@ class AStar(BestFirstSearch):
         """
         new_g = successor_node.g_cost
         old_node = self.open.has_state(successor_node.state)
-        if old_node is not None:
+        if old_node:
             old_node = self.open.get_node_by_state(successor_node.state)
             if new_g < old_node.g_cost:
                 self.open.extract_node(old_node)
                 self.open.push_node(successor_node)
         else:
-            if old_node is not None:
+            if self.close.has_state(successor_node.state):
                 old_node = self.close.get_node_by_state(successor_node.state)
                 if new_g < old_node.g_cost:
                     self.close.remove_node(old_node)
