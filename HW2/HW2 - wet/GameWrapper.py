@@ -55,19 +55,15 @@ class GameWrapper:
         else:
             self.game.start_game()
 
-
-    def check_cant_move_end_game(self, player_index):
-        player_cant_move = False
-
+    def check_cant_move_penalize(self, player_index):
         if self.game.player_cant_move(player_index):
             self.game.penalize_player(player_index, self.penalty_score)
-            player_cant_move = True
-        
-        if self.game.player_cant_move(1 - player_index):
-            self.game.penalize_player(1 - player_index, self.penalty_score)
-            player_cant_move = True
+            return True
+        return False
 
-        if player_cant_move:
+    def check_cant_move_end_game(self, player_index):
+
+        if player_index and (self.game.player_cant_move(player_index) or self.game.player_cant_move(1 - player_index)):
             score_1, score_2 = self.game.get_players_scores()
             if score_1 == score_2:
                 messages = ["     It's a Tie!", f'scores: {score_1}, {score_2}']
@@ -122,10 +118,14 @@ class GameWrapper:
 
         player_index = t % 2
         # print('TURN', t, 'player', player_index + 1)
+        cant_move = self.check_cant_move_penalize(player_index)
+        if cant_move:
+            pos = self.game.get_player_position(player_index)
+        else:
+            pos = self.play_turn(player_index)
+        updated_position = self.game.update_staff_with_pos(pos)
         self.check_cant_move_end_game(player_index)
-        pos = self.play_turn(player_index)
-
-        return self.game.update_staff_with_pos(pos)
+        return updated_position
 
     ################## game in terminal only ##################
 
@@ -136,10 +136,13 @@ class GameWrapper:
                 self.game.print_board_to_terminal(player_id=0)
             player_index = self.t % 2
             # print('TURN', t, 'player', player_index + 1)
-            self.check_cant_move_end_game(player_index)
-            pos = self.play_turn(player_index)
+            cant_move = self.check_cant_move_penalize(player_index)
+            if cant_move:
+                pos = self.game.get_player_position(player_index)
+            else:
+                pos = self.play_turn(player_index)
             self.game.update_staff_with_pos(pos)
-
+            self.check_cant_move_end_game(player_index)
             if self.print_game_in_terminal:
                 print('\nBoard after player', player_index + 1, 'moved')
                 self.game.print_board_to_terminal(player_id=0)
