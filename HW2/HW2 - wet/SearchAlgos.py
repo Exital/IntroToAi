@@ -3,8 +3,7 @@
 DECIDING_AGENT = 1
 OPPONENT = 2
 from utils import ALPHA_VALUE_INIT, BETA_VALUE_INIT
-#TODO: you can import more modules, if needed
-
+import numpy as np
 
 class SearchAlgos:
     def __init__(self, utility, succ, perform_move, goal):
@@ -72,7 +71,7 @@ class AlphaBeta(SearchAlgos):
 
 
 class State:
-    def __init__(self, board: list, penalty, score=0, opponent_score=0):
+    def __init__(self, board: list, penalty, score=0, opponent_score=0, fruits_timer=None, fruits_dict:dict=None):
         self.board = board
         self.score = score
         self.opponent_score = opponent_score
@@ -80,20 +79,31 @@ class State:
         self.loc = self.find_value(DECIDING_AGENT)
         self.opponent_loc = self.find_value(OPPONENT)
         self.penalty = penalty
+        self.fruits_timer = fruits_timer
+        self.fruits_dict = fruits_dict
         self.directions = [(1, 0), (0, 1), (-1, 0), (0, -1)]
 
+        # finding the fruits timer
+        if fruits_timer is None:
+            numrows = len(board)
+            numcols = len(board[0])
+            self.fruits_timer = min(numrows, numcols)
+
     def find_value(self, value_to_find):
-        for i, x in enumerate(self.board):
-            if value_to_find in x:
-                return i, x.index(value_to_find)
+        pos = np.where(self.board == value_to_find)
+        # convert pos to tuple of ints
+        return tuple(ax[0] for ax in pos)
 
     def valid_move(self, loc, move=(0, 0)):
         i = loc[0] + move[0]
         j = loc[1] + move[1]
         board = self.board
         in_board = 0 <= i < len(board) and 0 <= j < len(board[0])
-        white_or_fruit = board[i][j] == 0 or (board[i][j] not in [-1, 1, 2])
-        return in_board and white_or_fruit
+        if in_board:
+            white_or_fruit = self.board[i][j] == 0 or (self.board[i][j] not in [-1, 1, 2])
+            return in_board and white_or_fruit
+        else:
+            return False
 
     def steps_available(self, loc):
         """
@@ -110,7 +120,6 @@ class State:
     def game_is_tied(self):
         """
         Checks if the current state is a tie
-        @type state: State
         @return: boolean
         """
         tie_score = False
@@ -185,7 +194,6 @@ class State:
                     self.opponent_score += value
                 self.game_score = self.score - self.opponent_score
         self._update_locations()
-        self.last_move = direction
 
     def succ(self, player):
         """
@@ -199,7 +207,9 @@ class State:
         for direction in self.directions:
             if self.valid_move(location, direction):
                 new_board = self.board.copy()
-                new_state = State(new_board, self.penalty, self.score, self.opponent_score)
+                new_state = State(new_board, self.penalty, self.score, self.opponent_score,
+                                  self.fruits_timer, self.fruits_dict)
+
                 new_state.make_move(player, direction)
                 yield new_state
 
@@ -239,12 +249,15 @@ class State:
 
     def heuristic(self):
         count_zeroes = self.count_zeroes()
-        factor = [count_zeroes, 9, count_zeroes, 1]
-        weights = [1, 1, 1, 10]
+        factor = [count_zeroes, 9, count_zeroes, 1, 1]
+        weights = [1, 1, 1, 100, 100]
         game_score = self.game_score
+        fruits_score = self.fruits_game_score()
         hueristics = [self.number_of_reachable_nodes(self.loc) - self.number_of_reachable_nodes(self.opponent_loc),
                       2 * len(self.steps_available(self.loc)) - len(self.steps_available(self.opponent_loc)),
-                      self.longest_route_till_block(self.loc)-self.longest_route_till_block(self.opponent_loc), game_score]
+                      self.longest_route_till_block(self.loc)-self.longest_route_till_block(self.opponent_loc),
+                      game_score,
+                      fruits_score]
         result = 0
         for factor, weights, hueristic in zip(factor, weights, hueristics):
             result += (hueristic * weights) / factor
@@ -263,3 +276,38 @@ class State:
             self.game_score = self.score - self.opponent_score
         self._update_locations()
 
+    def find_minimum_path(self, loc, dst):
+        if loc == dst:
+            return 0
+        else:
+            curr_min = float('inf')
+            for direction in self.directions:
+                if self.valid_move(loc, direction):
+                    new_loc = loc[0] + direction[0], loc[1] + direction[1]
+                    val = self.find_minimum_path(new_loc, dst) + 1
+                    curr_min = min(val, curr_min)
+            return curr_min
+
+    def fruits_tick(self):
+        if self.fruits_timer > 0:
+            self.fruits_timer -= 1
+
+    def fruit_score(self, loc, fruit_pos, value):
+        distance = self.find_minimum_path(loc, fruit_pos)
+        if distance == float('inf'):
+            return 0
+        else:
+            if (distance * 2) <= self.fruits_timer:
+                return value / distance
+            else:
+                return 0
+
+    def fruits_game_score(self):
+        my_score = 0
+        opponent_score = 0
+
+        for pos, value in self.fruits_dict.items():
+            my_score += self.fruit_score(self.loc, pos, value)
+            opponent_score += self.fruit_score(self.opponent_score, pos, value)
+        max_score = max(my_score, opponent_score)
+        return (my_score - opponent_score) / max_score

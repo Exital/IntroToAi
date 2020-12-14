@@ -26,9 +26,10 @@ class Player(AbstractPlayer):
         max_value, max_value_move = float('-inf'), None
         minimax = MiniMax(None, None, None, None)
         for direction in self.directions:
-            if self.state.valid_move(self.loc, direction):
+            if self.state.valid_move(self.state.loc, direction):
                 new_board = self.state.board.copy()
-                new_state = State(new_board, self.penalty_score, self.state.score, self.state.opponent_score, self.state.last_move)
+                new_state = State(new_board, self.penalty_score, self.state.score, self.state.opponent_score,
+                                  self.state.fruits_timer, self.state.fruits_dict)
                 cur_minimax_val = minimax.search(new_state, depth - 1, False)
                 if cur_minimax_val >= max_value:
                     max_value = cur_minimax_val
@@ -84,7 +85,7 @@ class Player(AbstractPlayer):
         self.state.set_rival_move(pos)
 
 
-    def update_fruits(self, fruits_on_board_dict):
+    def update_fruits(self, fruits_on_board_dict: dict):
         """Update your info on the current fruits on board (if needed).
         input:
             - fruits_on_board_dict: dict of {pos: value}
@@ -92,8 +93,9 @@ class Player(AbstractPlayer):
                                     'value' is the value of this fruit.
         No output is expected.
         """
-        #TODO: erase the following line and implement this function. In case you choose not to use it, use 'pass' instead of the following line.
-        raise NotImplementedError
+        for (i, j), value in fruits_on_board_dict.items():
+            self.state.board[i][j] = value
+        self.state.fruits_dict = fruits_on_board_dict
 
 
     ########## helper functions in class ##########
