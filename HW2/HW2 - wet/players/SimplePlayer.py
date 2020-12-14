@@ -53,7 +53,6 @@ class Player(AbstractPlayer):
 
             if 0 <= i < len(self.board) and 0 <= j < len(self.board[0]) and (self.board[i][j] not in [-1, 1, 2]):   # then move is legal
                 new_pos = (i, j)
-                assert self.board[new_pos] == 0
                 self.board[new_pos] = 1
                 assert self.count_ones(self.board) == 1
 
