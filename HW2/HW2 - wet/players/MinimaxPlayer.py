@@ -1,6 +1,7 @@
 """
 MiniMax Player
 """
+DEBUG = False
 import time as t
 from players.AbstractPlayer import AbstractPlayer
 from SearchAlgos import MiniMax, State
@@ -30,7 +31,10 @@ class Player(AbstractPlayer):
                 new_board = self.state.board.copy()
                 new_state = State(new_board, self.penalty_score, self.state.score, self.state.opponent_score,
                                   self.state.fruits_timer, self.state.fruits_dict)
+                new_state.make_move(1, direction)
                 cur_minimax_val = minimax.search(new_state, depth - 1, False)
+                if DEBUG:
+                    print(f"The hueristic for {new_state.loc} is {cur_minimax_val}")
                 if cur_minimax_val >= max_value:
                     max_value = cur_minimax_val
                     max_value_move = direction
@@ -65,7 +69,6 @@ class Player(AbstractPlayer):
             next_iteration_max_time = 4 * last_iteration_time
             time_until_now = t.time() - time_start
             # DEBUG = self.loc==(4,9)
-            DEBUG = False
             while time_until_now + next_iteration_max_time < time_limit or (DEBUG and depth < 100):
                 depth += 1
                 iteration_start_time = t.time()
@@ -93,6 +96,7 @@ class Player(AbstractPlayer):
                                     'value' is the value of this fruit.
         No output is expected.
         """
+        # TODO move this to the state from the player.
         for (i, j), value in fruits_on_board_dict.items():
             self.state.board[i][j] = value
         self.state.fruits_dict = fruits_on_board_dict

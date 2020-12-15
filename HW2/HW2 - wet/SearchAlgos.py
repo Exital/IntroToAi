@@ -42,7 +42,7 @@ class MiniMax(SearchAlgos):
                 return state.game_score
         player = 1 if maximizing_player else 2
         if maximizing_player:
-            curr_max = float('inf')
+            curr_max = float('-inf')
             for child in state.succ(player):
                 value = self.search(child, depth - 1, False)
                 curr_max = max(value, curr_max)
@@ -250,7 +250,7 @@ class State:
     def heuristic(self):
         count_zeroes = self.count_zeroes()
         factor = [count_zeroes, 9, count_zeroes, 1, 1]
-        weights = [1, 1, 1, 100, 100]
+        weights = [1, 1, 1, 2, 20]
         game_score = self.game_score
         fruits_score = self.fruits_game_score()
         hueristics = [self.number_of_reachable_nodes(self.loc) - self.number_of_reachable_nodes(self.opponent_loc),
@@ -276,16 +276,18 @@ class State:
             self.game_score = self.score - self.opponent_score
         self._update_locations()
 
-    def find_minimum_path(self, loc, dst):
+    def find_minimum_path(self, loc, dst, visited=[]):
         if loc == dst:
             return 0
         else:
+            visited.append(loc)
             curr_min = float('inf')
             for direction in self.directions:
-                if self.valid_move(loc, direction):
-                    new_loc = loc[0] + direction[0], loc[1] + direction[1]
-                    val = self.find_minimum_path(new_loc, dst) + 1
+                new_loc = loc[0] + direction[0], loc[1] + direction[1]
+                if self.valid_move(loc, direction) and new_loc not in visited:
+                    val = self.find_minimum_path(new_loc, dst, visited) + 1
                     curr_min = min(val, curr_min)
+            visited.remove(loc)
             return curr_min
 
     def fruits_tick(self):
@@ -298,7 +300,10 @@ class State:
             return 0
         else:
             if (distance * 2) <= self.fruits_timer:
-                return value / distance
+                if distance == 0:
+                    return value
+                else:
+                    return value / distance
             else:
                 return 0
 
@@ -308,6 +313,16 @@ class State:
 
         for pos, value in self.fruits_dict.items():
             my_score += self.fruit_score(self.loc, pos, value)
-            opponent_score += self.fruit_score(self.opponent_score, pos, value)
+            opponent_score += self.fruit_score(self.opponent_loc, pos, value)
         max_score = max(my_score, opponent_score)
-        return (my_score - opponent_score) / max_score
+        if max_score == 0:
+            return 0
+        else:
+            return my_score - opponent_score
+
+    def update_fruits_on_board(self):
+        # TODO move fruits update to the state from player
+        if self.fruits_timer == 0:
+            for pos, _ in self.fruits_dict.items():
+                i, j = pos
+                self.board[]
