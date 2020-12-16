@@ -32,13 +32,15 @@ class Player(AbstractPlayer):
                 new_state = State(new_board, self.penalty_score, self.state.score, self.state.opponent_score,
                                   self.state.fruits_timer, self.state.fruits_dict)
                 new_state.make_move(1, direction)
-                cur_minimax_val = minimax.search(new_state, depth - 1, False)
+                cur_minimax_val = minimax.search(new_state, depth - 1, True)
                 if DEBUG:
-                    print(f"The hueristic for {new_state.loc} is {cur_minimax_val}")
+                    print(f"The hueristic for {new_state.loc} is {cur_minimax_val} in depth: {depth}"
+                          f""
+                          f"The score is {new_state.score}")
                 if cur_minimax_val >= max_value:
                     max_value = cur_minimax_val
                     max_value_move = direction
-        return max_value_move
+        return max_value_move, max_value
 
     def check_one_move(self):
         count_moves = 0
@@ -61,10 +63,10 @@ class Player(AbstractPlayer):
         time_start = t.time()
         only_move = self.check_one_move()
         if only_move is not None:
-            move = only_move
+            max_move = only_move
         else:
             depth = 1
-            move = self.choose_move(depth)
+            max_move, max_val = self.choose_move(depth)
             last_iteration_time = t.time() - time_start
             next_iteration_max_time = 4 * last_iteration_time
             time_until_now = t.time() - time_start
@@ -72,12 +74,18 @@ class Player(AbstractPlayer):
             while time_until_now + next_iteration_max_time < time_limit or (DEBUG and depth < 100):
                 depth += 1
                 iteration_start_time = t.time()
-                move = self.choose_move(depth)
+                max_move, val = self.choose_move(depth)
+                # if val > max_val:
+                #     max_val = val
+                #     max_move = move
                 last_iteration_time = t.time() - iteration_start_time
                 next_iteration_max_time = 4 * last_iteration_time
+
                 time_until_now = t.time() - time_start
-        self.state.make_move(1, move)
-        return move
+        self.state.make_move(1, max_move)
+        if DEBUG:
+            print(f"new location that was choosed is {self.state.loc}")
+        return max_move
 
     def set_rival_move(self, pos):
         """Update your info, given the new position of the rival.
@@ -97,9 +105,11 @@ class Player(AbstractPlayer):
         No output is expected.
         """
         # TODO move this to the state from the player.
-        for (i, j), value in fruits_on_board_dict.items():
-            self.state.board[i][j] = value
-        self.state.fruits_dict = fruits_on_board_dict
+        if self.state.fruits_dict is None:
+            for (i, j), value in fruits_on_board_dict.items():
+                self.state.board[i][j] = value
+            self.state.fruits_dict = fruits_on_board_dict
+        self.state.update_fruits_on_board()
 
 
     ########## helper functions in class ##########

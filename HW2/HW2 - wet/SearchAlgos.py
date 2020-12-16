@@ -250,7 +250,7 @@ class State:
     def heuristic(self):
         count_zeroes = self.count_zeroes()
         factor = [count_zeroes, 9, count_zeroes, 1, 1]
-        weights = [1, 1, 1, 2, 20]
+        weights = [1, 1, 1, 2, 2]
         game_score = self.game_score
         fruits_score = self.fruits_game_score()
         hueristics = [self.number_of_reachable_nodes(self.loc) - self.number_of_reachable_nodes(self.opponent_loc),
@@ -323,6 +323,8 @@ class State:
     def update_fruits_on_board(self):
         # TODO move fruits update to the state from player
         if self.fruits_timer == 0:
-            for pos, _ in self.fruits_dict.items():
+            # deleting all of the fruits from the board
+            for pos, value in self.fruits_dict.items():
                 i, j = pos
-                self.board[]
+                if self.board[i][j] == value:
+                    self.board[i][j] = 0
