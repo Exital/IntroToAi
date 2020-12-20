@@ -1,9 +1,11 @@
 """Search Algos: MiniMax, AlphaBeta
 """
-DECIDING_AGENT = 1
-OPPONENT = 2
+
 from utils import ALPHA_VALUE_INIT, BETA_VALUE_INIT
 import numpy as np
+DECIDING_AGENT = 1
+OPPONENT = 2
+
 
 class SearchAlgos:
     def __init__(self, utility, succ, perform_move, goal):
@@ -66,8 +68,32 @@ class AlphaBeta(SearchAlgos):
         :param: beta: beta value
         :return: A tuple: (The min max algorithm value, The direction in case of max node or None in min mode)
         """
-        #TODO: erase the following line and implement this function.
-        raise NotImplementedError
+        if depth == 0:
+            return state.heuristic()
+        if state.is_goal():
+            if state.game_is_tied():
+                return 0
+            else:
+                return state.game_score
+        player = 1 if maximizing_player else 2
+        if maximizing_player:
+            curr_max = float('-inf')
+            for child in state.succ(player):
+                value = self.search(child, depth - 1, False, alpha, beta)
+                curr_max = max(value, curr_max)
+                alpha = max(curr_max, alpha)
+                if curr_max >= beta:
+                    return float('inf')
+            return curr_max
+        else:
+            curr_min = float('inf')
+            for child in state.succ(player):
+                value = self.search(child, depth - 1, True, alpha, beta)
+                curr_min = min(value, curr_min)
+                beta = min(curr_min, beta)
+                if curr_min <= alpha:
+                    return float('-inf')
+            return curr_min
 
 
 class State:
@@ -263,6 +289,18 @@ class State:
             result += (hueristic * weights) / factor
         return result
 
+    def newheuristic(self):
+        game_score = (self.get_game_score_heuristic(), 0.6)
+        fruits_score = (self.get_fruit_score_heuristic(), 0.25)
+        road_score = (self.get_longest_road_score(), 0.05)
+        steps_score = (self.get_steps_available_score(), 0.05)
+        reachable_nodes_score = (self.get_reachable_nodes_score(), 0.05)
+        heuristics = [game_score, fruits_score, road_score, steps_score, reachable_nodes_score]
+        result = 0
+        for score, weight in heuristics:
+            result = score * weight
+        return result
+
     def set_rival_move(self, pos):
         old_i, old_j = self.find_value(2)
         new_i, new_j = pos
@@ -328,3 +366,65 @@ class State:
                 i, j = pos
                 if self.board[i][j] == value:
                     self.board[i][j] = 0
+
+    def get_game_score_heuristic(self):
+        """
+        get the heuristic for the game score
+        @return: value at the range of [1,-1]
+        @rtype: int
+        """
+        if self.score == self.opponent_score:
+            return 0
+        else:
+            return (self.score - self.opponent_score) / (abs(self.score) + abs(self.opponent_score))
+
+    def get_fruit_score_heuristic(self):
+
+        def helper(loc):
+            score = 0
+            for direction in self.directions:
+                if self.valid_move(self.loc, direction):
+                    for pos, value in self.fruits_dict.items():
+                        dist = self.find_minimum_path(self.loc, pos)
+                        if dist != float('inf') and dist * 2 <= self.fruits_timer:
+                            if dist == 0:
+                                score += value
+                            else:
+                                score += value / dist
+            return score
+
+        my_score = helper(self.loc)
+        opponent_score = helper(self.opponent_loc)
+        factor = my_score + opponent_score
+        if factor == 0:
+            return 0
+        else:
+            return (my_score - opponent_score) / factor
+
+    def get_reachable_nodes_score(self):
+        my_reachable = self.number_of_reachable_nodes(self.loc)
+        opponent_reachable = self.number_of_reachable_nodes(self.opponent_loc)
+        zeros = self.count_zeroes()
+
+        if zeros == 0:
+            return 0
+        else:
+            return (my_reachable - opponent_reachable) / zeros
+
+    def get_steps_available_score(self):
+        my_steps = len(self.steps_available(self.loc))
+        opponent_steps = len(self.steps_available(self.opponent_loc))
+        both = my_steps + opponent_steps
+        if both == 0:
+            return 0
+        else:
+            return (my_steps - opponent_steps) / both
+
+    def get_longest_road_score(self):
+        my_road = self.longest_route_till_block(self.loc)
+        opponent_road = self.longest_route_till_block(self.opponent_loc)
+        both = my_road + opponent_road
+        if both == 0:
+            return 0
+        else:
+            return (my_road - opponent_road) / both

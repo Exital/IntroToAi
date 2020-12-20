@@ -5,8 +5,8 @@ import os
 #TODO: edit the alpha and beta initialization values for AlphaBeta algorithm.
 # instead of 'None', write the real initialization value, learned in class.
 # hint: you can use np.inf
-ALPHA_VALUE_INIT = None
-BETA_VALUE_INIT = None 
+ALPHA_VALUE_INIT = float('-inf')
+BETA_VALUE_INIT = float('inf')
 
 def get_directions():
     """Returns all the possible directions of a player in the game as a list of tuples.

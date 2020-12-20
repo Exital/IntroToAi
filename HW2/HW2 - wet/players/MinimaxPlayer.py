@@ -75,9 +75,6 @@ class Player(AbstractPlayer):
                 depth += 1
                 iteration_start_time = t.time()
                 max_move, val = self.choose_move(depth)
-                # if val > max_val:
-                #     max_val = val
-                #     max_move = move
                 last_iteration_time = t.time() - iteration_start_time
                 next_iteration_max_time = 4 * last_iteration_time
 
@@ -95,7 +92,6 @@ class Player(AbstractPlayer):
         """
         self.state.set_rival_move(pos)
 
-
     def update_fruits(self, fruits_on_board_dict: dict):
         """Update your info on the current fruits on board (if needed).
         input:
@@ -104,17 +100,9 @@ class Player(AbstractPlayer):
                                     'value' is the value of this fruit.
         No output is expected.
         """
-        # TODO move this to the state from the player.
         if self.state.fruits_dict is None:
             for (i, j), value in fruits_on_board_dict.items():
                 self.state.board[i][j] = value
             self.state.fruits_dict = fruits_on_board_dict
         self.state.update_fruits_on_board()
 
-
-    ########## helper functions in class ##########
-    #TODO: add here helper functions in class, if needed
-
-
-    ########## helper functions for MiniMax algorithm ##########
-    #TODO: add here the utility, succ, and perform_move functions used in MiniMax algorithm
