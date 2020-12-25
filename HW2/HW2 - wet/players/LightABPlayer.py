@@ -10,7 +10,7 @@ DEPTH = 3
 
 class Player(AbstractPlayer):
     def __init__(self, game_time, penalty_score):
-        AbstractPlayer.__init__(self, game_time, penalty_score) # keep the inheritance of the parent's (AbstractPlayer) __init__()
+        AbstractPlayer.__init__(self, game_time, penalty_score)
         self.state = None
 
     def set_game_params(self, board):
@@ -64,13 +64,9 @@ class Player(AbstractPlayer):
         if only_move is not None:
             max_move = only_move
         else:
-            depth = 1
-            max_move, max_val = self.choose_move(depth)
-            while depth < DEPTH:
-                depth += 1
-                max_move, val = self.choose_move(depth)
-                if DEBUG_PRINT:
-                    print(f"Best move till now is {max_move} with val {val}")
+            max_move, val = self.choose_move(DEPTH)
+            if DEBUG_PRINT:
+                print(f"Best move till now is {max_move} with val {val}")
         self.state.make_move(1, max_move)
         if DEBUG_PRINT:
             print(f"new location that was choosed is {self.state.loc}")
@@ -83,6 +79,17 @@ class Player(AbstractPlayer):
         No output is expected
         """
         self.state.set_rival_move(pos)
+
+
+    def light_heuristic(self):
+        road_score = (self.state.get_longest_road_score(), 0.33)
+        steps_score = (self.state.get_steps_available_score(), 0.33)
+        reachable_nodes_score = (self.state.get_reachable_nodes_score(), 0.33)
+        heuristics = [road_score, steps_score, reachable_nodes_score]
+        result = 0
+        for score, weight in heuristics:
+            result += score * weight
+        return result
 
     def update_fruits(self, fruits_on_board_dict):
         """Update your info on the current fruits on board (if needed).
@@ -97,13 +104,3 @@ class Player(AbstractPlayer):
                 self.state.board[i][j] = value
             self.state.fruits_dict = fruits_on_board_dict
         self.state.update_fruits_on_board()
-
-    def light_heuristic(self):
-        road_score = (self.state.get_longest_road_score(), 0.33)
-        steps_score = (self.state.get_steps_available_score(), 0.33)
-        reachable_nodes_score = (self.state.get_reachable_nodes_score(), 0.33)
-        heuristics = [road_score, steps_score, reachable_nodes_score]
-        result = 0
-        for score, weight in heuristics:
-            result += score * weight
-        return result

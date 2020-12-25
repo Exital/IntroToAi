@@ -5,7 +5,7 @@ from utils import ALPHA_VALUE_INIT, BETA_VALUE_INIT
 import numpy as np
 DECIDING_AGENT = 1
 OPPONENT = 2
-DEBUG_PRINT = True
+DEBUG_PRINT = False
 PRINT_BOARD = False
 
 
