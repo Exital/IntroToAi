@@ -1,16 +1,18 @@
 """
 MiniMax Player with AlphaBeta pruning with heavy heuristic
 """
+from SearchAlgos import State, AlphaBeta
 from players.AbstractPlayer import AbstractPlayer
-
-
-# TODO: you can import more modules, if needed
+import time as t
+DEBUG_PRINT = False
+DEBUG = False
+DEPTH = 3
 
 
 class Player(AbstractPlayer):
     def __init__(self, game_time, penalty_score):
-        AbstractPlayer.__init__(self, game_time, penalty_score)  # keep the inheritance of the parent's (AbstractPlayer) __init__()
-        # TODO: initialize more fields, if needed, and the AlphaBeta algorithm from SearchAlgos.py
+        AbstractPlayer.__init__(self, game_time, penalty_score)
+        self.state = None
 
     def set_game_params(self, board):
         """Set the game parameters needed for this player.
@@ -20,42 +22,88 @@ class Player(AbstractPlayer):
             - board: np.array, a 2D matrix of the board.
         No output is expected.
         """
-        # TODO: erase the following line and implement this function.
-        raise NotImplementedError
+        self.state = State(board, self.penalty_score)
 
-    def make_move(self, time_limit, players_score):
-        """Make move with this Player.
-        input:
-            - time_limit: float, time limit for a single turn.
-        output:
-            - direction: tuple, specifing the Player's movement, chosen from self.directions
-        """
-        # TODO: erase the following line and implement this function.
-        raise NotImplementedError
 
-    def set_rival_move(self, pos):
-        """Update your info, given the new position of the rival.
-        input:
-            - pos: tuple, the new position of the rival.
-        No output is expected
-        """
-        # TODO: erase the following line and implement this function.
-        raise NotImplementedError
+def choose_move(self, depth):
+    max_value, max_value_move = float('-inf'), None
+    alphabeta = AlphaBeta(None, None, None, None)
+    for direction in self.directions:
+        if self.state.valid_move(self.state.loc, direction):
+            new_board = self.state.board.copy()
+            new_state = State(new_board, self.penalty_score, self.state.score, self.state.opponent_score,
+                              self.state.fruits_timer, self.state.fruits_dict)
+            new_state.make_move(1, direction)
+            cur_minimax_val = alphabeta.search(new_state, depth - 1, True)
+            if DEBUG:
+                print(f"The hueristic for {new_state.loc} is {cur_minimax_val} in depth: {depth}"
+                      f""
+                      f"The score is {new_state.score}")
+            if cur_minimax_val >= max_value:
+                max_value = cur_minimax_val
+                max_value_move = direction
+    return max_value_move, max_value
 
-    def update_fruits(self, fruits_on_board_dict):
-        """Update your info on the current fruits on board (if needed).
-        input:
-            - fruits_on_board_dict: dict of {pos: value}
-                                    where 'pos' is a tuple describing the fruit's position on board,
-                                    'value' is the value of this fruit.
-        No output is expected.
-        """
-        # TODO: erase the following line and implement this function. In case you choose not to use this function,
-        # use 'pass' instead of the following line.
-        raise NotImplementedError
 
-    ########## helper functions in class ##########
-    # TODO: add here helper functions in class, if needed
+def check_one_move(self):
+    count_moves = 0
+    one_move = None
+    for direction in self.directions:
+        if self.state.valid_move(self.state.loc, direction):
+            count_moves += 1
+            one_move = direction
+    if count_moves != 1:
+        return None
+    return one_move
 
-    ########## helper functions for AlphaBeta algorithm ##########
-    # TODO: add here the utility, succ, and perform_move functions used in AlphaBeta algorithm
+
+def make_move(self, time_limit, players_score):
+    """Make move with this Player.
+    input:
+        - time_limit: float, time limit for a single turn.
+    output:
+        - direction: tuple, specifing the Player's movement, chosen from self.directions
+    """
+    only_move = self.check_one_move()
+    if only_move is not None:
+        max_move = only_move
+    else:
+        depth = 1
+        max_move, max_val = self.choose_move(depth)
+        while depth < DEPTH:
+            depth += 1
+            max_move, val = self.choose_move(depth)
+            if DEBUG_PRINT:
+                print(f"Best move till now is {max_move} with val {val}")
+    self.state.make_move(1, max_move)
+    if DEBUG_PRINT:
+        print(f"new location that was choosed is {self.state.loc}")
+    return max_move
+
+
+def set_rival_move(self, pos):
+    """Update your info, given the new position of the rival.
+    input:
+        - pos: tuple, the new position of the rival.
+    No output is expected
+    """
+    self.state.set_rival_move(pos)
+
+
+def update_fruits(self, fruits_on_board_dict):
+    """Update your info on the current fruits on board (if needed).
+    input:
+        - fruits_on_board_dict: dict of {pos: value}
+                                where 'pos' is a tuple describing the fruit's position on board,
+                                'value' is the value of this fruit.
+    No output is expected.
+    """
+    if self.state.fruits_dict is None:
+        for (i, j), value in fruits_on_board_dict.items():
+            self.state.board[i][j] = value
+        self.state.fruits_dict = fruits_on_board_dict
+    self.state.update_fruits_on_board()
+
+
+
+

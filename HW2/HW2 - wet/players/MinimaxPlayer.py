@@ -1,11 +1,12 @@
 """
 MiniMax Player
 """
-DEBUG = False
+
 import time as t
 from players.AbstractPlayer import AbstractPlayer
 from SearchAlgos import MiniMax, State
-#TODO: you can import more modules, if needed
+DEBUG = False
+PRINT_DEBUG = False
 
 
 class Player(AbstractPlayer):
@@ -33,10 +34,8 @@ class Player(AbstractPlayer):
                                   self.state.fruits_timer, self.state.fruits_dict)
                 new_state.make_move(1, direction)
                 cur_minimax_val = minimax.search(new_state, depth - 1, True)
-                if DEBUG:
-                    print(f"The hueristic for {new_state.loc} is {cur_minimax_val} in depth: {depth}"
-                          f""
-                          f"The score is {new_state.score}")
+                if PRINT_DEBUG:
+                    print(f"The hueristic for {new_state.loc} is {cur_minimax_val} in depth: {depth} score is: {new_state.game_score}")
                 if cur_minimax_val >= max_value:
                     max_value = cur_minimax_val
                     max_value_move = direction
@@ -80,7 +79,7 @@ class Player(AbstractPlayer):
 
                 time_until_now = t.time() - time_start
         self.state.make_move(1, max_move)
-        if DEBUG:
+        if PRINT_DEBUG:
             print(f"new location that was choosed is {self.state.loc}")
         return max_move
 

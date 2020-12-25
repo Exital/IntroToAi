@@ -6,6 +6,7 @@ from SearchAlgos import State, AlphaBeta
 from players.AbstractPlayer import AbstractPlayer
 import time as t
 DEBUG = False
+DEBUG_PRINT = False
 
 
 class Player(AbstractPlayer):
@@ -77,10 +78,11 @@ class Player(AbstractPlayer):
                 max_move, val = self.choose_move(depth)
                 last_iteration_time = t.time() - iteration_start_time
                 next_iteration_max_time = 4 * last_iteration_time
-
                 time_until_now = t.time() - time_start
+                if DEBUG_PRINT:
+                    print(f"Best move till now is {max_move} with val {val}")
         self.state.make_move(1, max_move)
-        if DEBUG:
+        if DEBUG_PRINT:
             print(f"new location that was choosed is {self.state.loc}")
         return max_move
 
