@@ -3,9 +3,9 @@ MiniMax Player with AlphaBeta pruning with light heuristic
 """
 from SearchAlgos import State, AlphaBeta
 from players.AbstractPlayer import AbstractPlayer
-DEBUG_PRINT = True
+DEBUG_PRINT = False
 DEBUG = False
-DEPTH = 5
+DEPTH = 4
 
 
 class Player(AbstractPlayer):

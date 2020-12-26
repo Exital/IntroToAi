@@ -432,6 +432,7 @@ class State:
                 i, j = pos
                 if self.board[i][j] == value:
                     self.board[i][j] = 0
+            self.fruits_dict = {}
 
     def get_game_score_heuristic(self):
         """
