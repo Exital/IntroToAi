@@ -76,6 +76,8 @@ class Player(AbstractPlayer):
                 depth += 1
                 iteration_start_time = t.time()
                 max_move, val = self.choose_move(depth)
+                if val == float('inf'):
+                    break
                 last_iteration_time = t.time() - iteration_start_time
                 next_iteration_max_time = 4 * last_iteration_time
                 time_until_now = t.time() - time_start

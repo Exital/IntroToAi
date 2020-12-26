@@ -46,7 +46,10 @@ class MiniMax(SearchAlgos):
             if state.game_is_tied():
                 return 0
             else:
-                return state.game_score
+                if state.game_score > 0:
+                    return float('inf')
+                else:
+                    return float('-inf')
         player = 1 if maximizing_player else 2
         if maximizing_player:
             curr_max = float('-inf')
@@ -82,7 +85,10 @@ class AlphaBeta(SearchAlgos):
             if state.game_is_tied():
                 return 0
             else:
-                return state.game_score
+                if state.game_score > 0:
+                    return float('inf')
+                else:
+                    return float('-inf')
         player = 1 if maximizing_player else 2
         if maximizing_player:
             curr_max = float('-inf')
@@ -184,6 +190,11 @@ class State:
         my_available_steps = self.steps_available(self.loc)
         opp_available_steps = self.steps_available(self.opponent_loc)
         if len(my_available_steps) == 0 or len(opp_available_steps) == 0:
+            if len(my_available_steps) == 0:
+                self.score -= self.penalty
+            else:
+                self.opponent_score -= self.penalty
+            self.game_score = self.score - self.opponent_score
             return True, self.game_score
         else:
             return False, None
