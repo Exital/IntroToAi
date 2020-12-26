@@ -33,7 +33,7 @@ class Player(AbstractPlayer):
                                   self.state.fruits_timer, self.state.fruits_dict)
                 new_state.make_move(1, direction)
                 cur_minimax_val = alphabeta.search(new_state, depth - 1, True)
-                if DEBUG:
+                if DEBUG_PRINT:
                     print(f"The hueristic for {new_state.loc} is {cur_minimax_val} in depth: {depth}"
                           f""
                           f"The score is {new_state.score}")

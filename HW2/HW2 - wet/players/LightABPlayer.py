@@ -3,9 +3,9 @@ MiniMax Player with AlphaBeta pruning with light heuristic
 """
 from SearchAlgos import State, AlphaBeta
 from players.AbstractPlayer import AbstractPlayer
-DEBUG_PRINT = False
+DEBUG_PRINT = True
 DEBUG = False
-DEPTH = 3
+DEPTH = 5
 
 
 class Player(AbstractPlayer):
@@ -33,7 +33,7 @@ class Player(AbstractPlayer):
                                   self.state.fruits_timer, self.state.fruits_dict)
                 new_state.make_move(1, direction)
                 cur_minimax_val = alphabeta.search(new_state, depth - 1, True)
-                if DEBUG:
+                if DEBUG_PRINT:
                     print(f"The hueristic for {new_state.loc} is {cur_minimax_val} in depth: {depth}"
                           f""
                           f"The score is {new_state.score}")
@@ -82,13 +82,18 @@ class Player(AbstractPlayer):
 
 
     def light_heuristic(self):
-        road_score = (self.state.get_longest_road_score(), 0.33)
-        steps_score = (self.state.get_steps_available_score(), 0.33)
-        reachable_nodes_score = (self.state.get_reachable_nodes_score(), 0.33)
-        heuristics = [road_score, steps_score, reachable_nodes_score]
+        game_score = (self.state.get_game_score_heuristic(), 0.8)
+        moves_available = len(self.state.steps_available(self.state.loc))
+        moves = (4 - moves_available) / 4
+        moves_score = (moves, 0.2)
+        heuristics = [game_score, moves_score]
         result = 0
         for score, weight in heuristics:
             result += score * weight
+        # if DEBUG_PRINT:
+        #     print(f"Heuristic for location - {self.state.loc} value is {result}\n"
+        #            f"moves score is: {moves * moves_score[1]}\n"
+        #           f"game score is: {game_score[0] * game_score[1]}")
         return result
 
     def update_fruits(self, fruits_on_board_dict):
