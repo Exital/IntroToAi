@@ -78,7 +78,7 @@ class GameWrapper:
         # get fruits on board - we assume each player can see the board at any time
         fruits_on_board_dict = self.game.get_fruits_on_board()
         self.players[player_index].update_fruits(fruits_on_board_dict)
-        players_score = self.game.get_players_scores()
+        players_score = self.game.get_players_scores().copy()
         if player_index:
             players_score.reverse()
         start = time.time()

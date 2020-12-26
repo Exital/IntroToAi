@@ -161,7 +161,7 @@ class Game:
         self.map[pos[0],pos[1]] = value
 
         # update fruits_on_board tracking
-        board_time = random.randint(self.min_fruit_time, self.max_fruit_time) # in turns
+        board_time = self.min_fruit_time * 2
         self.fruits_on_board[pos] = {'fruit_art':fruit, 'value': value, 'board_time_left':board_time}
 
     def create_fruits(self):
@@ -173,7 +173,6 @@ class Game:
                 pos = self.choose_fruit_pos() # don't cover the players, existing fruits and blocked cells
                 if pos != -1:
                     self.add_fruit(pos)
-
 
     def update_fruits(self):
         # update fruits timings
