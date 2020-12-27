@@ -5,7 +5,7 @@ from SearchAlgos import State, AlphaBeta
 from players.AbstractPlayer import AbstractPlayer
 DEBUG_PRINT = False
 DEBUG = False
-DEPTH = 4
+DEPTH = 5
 
 
 class Player(AbstractPlayer):

@@ -471,12 +471,12 @@ class State:
     def get_reachable_nodes_score(self):
         my_reachable = self.number_of_reachable_nodes(self.loc)
         opponent_reachable = self.number_of_reachable_nodes(self.opponent_loc)
-        zeros = self.count_zeroes()
+        factor = my_reachable + opponent_reachable
 
-        if zeros == 0:
+        if factor == 0:
             return 0
         else:
-            return (my_reachable - opponent_reachable) / zeros
+            return (my_reachable - opponent_reachable) / factor
 
     def get_steps_available_score(self):
         my_steps = len(self.steps_available(self.loc))
