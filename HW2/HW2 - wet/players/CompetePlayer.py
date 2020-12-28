@@ -5,7 +5,7 @@ from players.AbstractPlayer import AbstractPlayer
 from SearchAlgos import AlphaBeta, State
 import time as t
 DEBUG = False
-DEBUG_PRINT = False
+DEBUG_PRINT = True
 
 
 class Player(AbstractPlayer):
@@ -27,7 +27,7 @@ class Player(AbstractPlayer):
 
     def choose_move(self, depth):
         max_value, max_value_move = float('-inf'), None
-        alphabeta = AlphaBeta(None, None, None, None)
+        alphabeta = AlphaBeta(self.competion_hueristic, None, None, None)
         for direction in self.directions:
             if self.state.valid_move(self.state.loc, direction):
                 new_board = self.state.board.copy()
@@ -58,6 +58,10 @@ class Player(AbstractPlayer):
         output:
             - direction: tuple, specifing the Player's movement, chosen from self.directions
         """
+        depth = 0
+        if self.state.has_stop_advantage():
+            while True:
+                pass
         time_start = t.time()
         only_move = self.check_one_move()
         if only_move is not None:
@@ -86,7 +90,8 @@ class Player(AbstractPlayer):
                       f"time left: {self.time_left}\n"
                       f"time limit for move: {limit}")
         self.state.make_move(1, max_move)
-
+        if DEBUG_PRINT:
+            print(f"depth reached is {depth}")
         return max_move
 
     def set_rival_move(self, pos):
@@ -110,3 +115,6 @@ class Player(AbstractPlayer):
                 self.state.board[i][j] = value
             self.state.fruits_dict = fruits_on_board_dict
         self.state.update_fruits_on_board()
+
+    def competion_hueristic(self):
+        return self.state.get_game_score_heuristic()

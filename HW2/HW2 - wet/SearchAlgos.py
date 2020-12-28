@@ -496,3 +496,5 @@ class State:
         else:
             return (my_road - opponent_road) / both
 
+    def has_stop_advantage(self):
+        return self.score - self.penalty > self.opponent_score
