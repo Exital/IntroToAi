@@ -41,7 +41,7 @@ class MiniMax(SearchAlgos):
             if self.utility is None:
                 return state.newheuristic()
             else:
-                return self.utility()
+                return self.utility(state)
         if state.is_goal():
             if state.game_is_tied():
                 return 0
@@ -80,7 +80,7 @@ class AlphaBeta(SearchAlgos):
             if self.utility is None:
                 return state.newheuristic()
             else:
-                return self.utility()
+                return self.utility(state)
         if state.is_goal():
             if state.game_is_tied():
                 return 0

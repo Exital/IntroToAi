@@ -81,9 +81,9 @@ class Player(AbstractPlayer):
         self.state.set_rival_move(pos)
 
 
-    def light_heuristic(self):
-        game_score = (self.state.get_game_score_heuristic(), 0.8)
-        moves_available = len(self.state.steps_available(self.state.loc))
+    def light_heuristic(self, state):
+        game_score = (state.get_game_score_heuristic(), 0.8)
+        moves_available = len(state.steps_available(state.loc))
         moves = (4 - moves_available) / 4
         moves_score = (moves, 0.2)
         heuristics = [game_score, moves_score]

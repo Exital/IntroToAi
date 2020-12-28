@@ -117,10 +117,8 @@ class Player(AbstractPlayer):
             self.state.fruits_dict = fruits_on_board_dict
         self.state.update_fruits_on_board()
 
-    def competion_hueristic(self):
-        score = self.state.score - self.state.opponent_score
-        if DEBUG_PRINT:
-            print(f"the hueristic value for competion is {score}")
-            if score != 0:
-                print("found it")
+    def competion_hueristic(self, state):
+        score = state.get_game_score_heuristic()
+        if score != 0:
+            print(f"value is {score}")
         return score
