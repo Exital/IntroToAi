@@ -5,7 +5,7 @@ from SearchAlgos import State, AlphaBeta
 from players.AbstractPlayer import AbstractPlayer
 DEBUG_PRINT = False
 DEBUG = False
-DEPTH = 2
+DEPTH = 5
 
 
 class Player(AbstractPlayer):
@@ -32,7 +32,7 @@ class Player(AbstractPlayer):
                 new_state = State(new_board, self.penalty_score, self.state.score, self.state.opponent_score,
                                   self.state.fruits_timer, self.state.fruits_dict)
                 new_state.make_move(1, direction)
-                cur_minimax_val = alphabeta.search(new_state, depth - 1, True)
+                cur_minimax_val = alphabeta.search(new_state, depth - 1, False)
                 if DEBUG_PRINT:
                     print(f"The hueristic for {new_state.loc} is {cur_minimax_val} in depth: {depth}"
                           f""

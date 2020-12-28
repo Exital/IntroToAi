@@ -13,7 +13,7 @@ class Player(AbstractPlayer):
         AbstractPlayer.__init__(self, game_time, penalty_score)
         self.state = None
         self.time_left = game_time
-        self.time_factor = 0.2
+        self.time_factor = 0.4
 
     def set_game_params(self, board):
         """Set the game parameters needed for this player.
@@ -34,7 +34,7 @@ class Player(AbstractPlayer):
                 new_state = State(new_board, self.penalty_score, self.state.score, self.state.opponent_score,
                                   self.state.fruits_timer, self.state.fruits_dict)
                 new_state.make_move(1, direction)
-                cur_minimax_val = alphabeta.search(new_state, depth - 1, True)
+                cur_minimax_val = alphabeta.search(new_state, depth - 1, False)
                 if cur_minimax_val >= max_value:
                     max_value = cur_minimax_val
                     max_value_move = direction
@@ -59,9 +59,9 @@ class Player(AbstractPlayer):
             - direction: tuple, specifing the Player's movement, chosen from self.directions
         """
         depth = 0
-        if self.state.has_stop_advantage():
-            while True:
-                pass
+        # if self.state.has_stop_advantage():
+        #     while True:
+        #         pass
         time_start = t.time()
         only_move = self.check_one_move()
         if only_move is not None:
@@ -73,7 +73,7 @@ class Player(AbstractPlayer):
             next_iteration_max_time = 4 * last_iteration_time
             time_until_now = t.time() - time_start
             limit = self.time_left * self.time_factor
-            while time_until_now + next_iteration_max_time < limit or (DEBUG and depth < 100):
+            while time_until_now + next_iteration_max_time < limit:
                 depth += 1
                 iteration_start_time = t.time()
                 max_move, val = self.choose_move(depth)
@@ -88,7 +88,8 @@ class Player(AbstractPlayer):
                 print(f"new location that was choosed is {self.state.loc}")
                 print(f"move took: {time_until_now}\n"
                       f"time left: {self.time_left}\n"
-                      f"time limit for move: {limit}")
+                      f"time limit for move: {limit}"
+                      f"value was {val}")
         self.state.make_move(1, max_move)
         if DEBUG_PRINT:
             print(f"depth reached is {depth}")
@@ -117,4 +118,9 @@ class Player(AbstractPlayer):
         self.state.update_fruits_on_board()
 
     def competion_hueristic(self):
-        return self.state.get_game_score_heuristic()
+        score = self.state.score - self.state.opponent_score
+        if DEBUG_PRINT:
+            print(f"the hueristic value for competion is {score}")
+            if score != 0:
+                print("found it")
+        return score

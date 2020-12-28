@@ -127,7 +127,7 @@ class State:
         if fruits_timer is None:
             numrows = len(board)
             numcols = len(board[0])
-            self.fruits_timer = min(numrows, numcols)
+            self.fruits_timer = min(numrows, numcols) * 2
 
     def find_value(self, value_to_find):
         pos = np.where(self.board == value_to_find)
@@ -239,6 +239,7 @@ class State:
                     self.opponent_score += value
                 self.game_score = self.score - self.opponent_score
         self._update_locations()
+        self.fruits_tick()
 
     def print_board(self, player_id):
         print('_' * len(self.board[0]) * 4)
@@ -264,6 +265,9 @@ class State:
                                   self.fruits_timer, self.fruits_dict)
 
                 new_state.make_move(player, direction)
+                new_state.fruits_tick()
+                if new_state.fruits_timer == 0:
+                    new_state.update_fruits_on_board()
                 yield new_state
 
     def count_zeroes(self):
