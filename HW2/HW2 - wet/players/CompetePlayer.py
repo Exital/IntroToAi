@@ -2,7 +2,7 @@
 Player for the competition
 """
 from players.AbstractPlayer import AbstractPlayer
-from SearchAlgos import AlphaBeta, State
+from SearchAlgos import AlphaBeta, State, MiniMax
 import time as t
 DEBUG = False
 DEBUG_PRINT = True
@@ -119,6 +119,4 @@ class Player(AbstractPlayer):
 
     def competion_hueristic(self, state):
         score = state.get_game_score_heuristic()
-        if score != 0:
-            print(f"value is {score}")
         return score

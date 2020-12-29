@@ -134,7 +134,7 @@ class State:
         # convert pos to tuple of ints
         return tuple(ax[0] for ax in pos)
 
-    def valid_move(self, loc, move=(0, 0)):
+    def valid_move(self, loc, move):
         i = loc[0] + move[0]
         j = loc[1] + move[1]
         board = self.board
@@ -287,7 +287,7 @@ class State:
             index += 1
             for direction in self.directions:
                 i, j = head_loc[0] + direction[0], head_loc[1] + direction[1]
-                if (i, j) not in queue and self.valid_move((i, j)):
+                if (i, j) not in queue and self.valid_move(head_loc, direction):
                     queue.append((i, j))
         return index
 
