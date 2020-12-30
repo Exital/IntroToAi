@@ -1,18 +1,24 @@
 """
 MiniMax Player
 """
-
-import time as t
 from players.AbstractPlayer import AbstractPlayer
-from SearchAlgos import MiniMax, State
-DEBUG = False
-PRINT_DEBUG = False
+from utils import tup_add
+import numpy as np
+#TODO: you can import more modules, if needed
 
 
 class Player(AbstractPlayer):
     def __init__(self, game_time, penalty_score):
-        AbstractPlayer.__init__(self, game_time, penalty_score)
-        self.state = None
+        AbstractPlayer.__init__(self, game_time, penalty_score) # keep the inheritance of the parent's (AbstractPlayer) __init__()
+        self.board = None
+        self.loc = None
+        self.opponent_loc = None
+        self.my_score = 0
+        self.opponent_score = 0
+        self.fruits_timer = None
+        self.fruits_dict = {}
+        self.last_move = None  # tuple - (move, player)
+
 
     def set_game_params(self, board):
         """Set the game parameters needed for this player.
@@ -22,35 +28,13 @@ class Player(AbstractPlayer):
             - board: np.array, a 2D matrix of the board.
         No output is expected.
         """
-        self.state = State(board, self.penalty_score)
-
-    def choose_move(self, depth):
-        max_value, max_value_move = float('-inf'), None
-        minimax = MiniMax(None, None, None, None)
-        for direction in self.directions:
-            if self.state.valid_move(self.state.loc, direction):
-                new_board = self.state.board.copy()
-                new_state = State(new_board, self.penalty_score, self.state.score, self.state.opponent_score,
-                                  self.state.fruits_timer, self.state.fruits_dict)
-                new_state.make_move(1, direction)
-                cur_minimax_val = minimax.search(new_state, depth - 1, False)
-                if PRINT_DEBUG:
-                    print(f"The hueristic for {new_state.loc} is {cur_minimax_val} in depth: {depth} score is: {new_state.game_score}")
-                if cur_minimax_val >= max_value:
-                    max_value = cur_minimax_val
-                    max_value_move = direction
-        return max_value_move, max_value
-
-    def check_one_move(self):
-        count_moves = 0
-        one_move = None
-        for direction in self.directions:
-            if self.state.valid_move(self.state.loc, direction):
-                count_moves += 1
-                one_move = direction
-        if count_moves != 1:
-            return None
-        return one_move
+        self.board = board
+        # setting fruit's timer to the shortest edge * 2.
+        numrows = len(board)
+        numcols = len(board[0])
+        self.fruits_timer = min(numrows, numcols) * 2
+        # setting the locations of the players
+        self.update_players_locations()
 
     def make_move(self, time_limit, players_score):
         """Make move with this Player.
@@ -59,31 +43,8 @@ class Player(AbstractPlayer):
         output:
             - direction: tuple, specifing the Player's movement, chosen from self.directions
         """
-        time_start = t.time()
-        only_move = self.check_one_move()
-        if only_move is not None:
-            max_move = only_move
-        else:
-            depth = 1
-            max_move, max_val = self.choose_move(depth)
-            last_iteration_time = t.time() - time_start
-            next_iteration_max_time = 4 * last_iteration_time
-            time_until_now = t.time() - time_start
-            # DEBUG = self.loc==(4,9)
-            while time_until_now + next_iteration_max_time < time_limit or (DEBUG and depth < 100):
-                depth += 1
-                iteration_start_time = t.time()
-                max_move, val = self.choose_move(depth)
-                if val == float('inf'):
-                    break
-                last_iteration_time = t.time() - iteration_start_time
-                next_iteration_max_time = 4 * last_iteration_time
-
-                time_until_now = t.time() - time_start
-        self.state.make_move(1, max_move)
-        if PRINT_DEBUG:
-            print(f"new location that was choosed is {self.state.loc}")
-        return max_move
+        #TODO: erase the following line and implement this function.
+        raise NotImplementedError
 
     def set_rival_move(self, pos):
         """Update your info, given the new position of the rival.
@@ -91,9 +52,19 @@ class Player(AbstractPlayer):
             - pos: tuple, the new position of the rival.
         No output is expected
         """
-        self.state.set_rival_move(pos)
+        old_i, old_j = self.opponent_loc
+        new_i, new_j = pos
+        self.board[old_i][old_j] = -1
+        if self.board[new_i][new_j] == 0:
+            self.board[new_i][new_j] = 2
+        else:
+            value = self.board[new_i][new_j]
+            self.board[new_i][new_j] = 2
+            self.opponent_score += value
+        self.update_players_locations()
+        self.update_fruits_on_board(forward=True)
 
-    def update_fruits(self, fruits_on_board_dict: dict):
+    def update_fruits(self, fruits_on_board_dict):
         """Update your info on the current fruits on board (if needed).
         input:
             - fruits_on_board_dict: dict of {pos: value}
@@ -101,9 +72,104 @@ class Player(AbstractPlayer):
                                     'value' is the value of this fruit.
         No output is expected.
         """
-        if self.state.fruits_dict is None:
-            for (i, j), value in fruits_on_board_dict.items():
-                self.state.board[i][j] = value
-            self.state.fruits_dict = fruits_on_board_dict
-        self.state.update_fruits_on_board()
+        self.fruits_dict = fruits_on_board_dict
+        self.update_fruits_on_board(init=True)
 
+    def find_value(self, value_to_find):
+        pos = np.where(self.board == value_to_find)
+        # convert pos to tuple of ints
+        return tuple(ax[0] for ax in pos)
+
+    def update_players_locations(self):
+        self.loc = self.find_value(1)
+        self.opponent_loc = self.find_value(2)
+
+    def update_fruits_on_board(self, forward=True, init=False):
+        """
+        Updates the fruits on the board, deleting or applying them.
+        forward - bool: true if we are moving forward, false for backwards.
+        """
+        if init:
+            tick = 0
+        else:
+            tick = 1 if forward else -1
+        self.fruits_timer += tick
+
+        # deleting all of the fruits from the board
+        if self.fruits_timer <= 0:
+            for pos, value in self.fruits_dict.items():
+                i, j = pos
+                if self.board[i][j] == value:
+                    self.board[i][j] = 0
+
+        # returning the fruits to the board
+        if self.fruits_timer > 0:
+            for pos, value in self.fruits_dict.items():
+                i, j = pos
+                if self.board[i][j] == 0:
+                    self.board[i][j] = value
+
+    def steps_available(self, loc):
+        """
+        Steps_available will calculate the steps available from a location
+        @type loc: tuple
+        @return: list - list of available moves
+        """
+        number_steps_available = []
+        for d in self.directions:
+            if self.valid_move(loc, d):
+                number_steps_available.append(d)
+        return len(number_steps_available)
+
+    def valid_move(self, loc, move):
+        i, j = tup_add(loc, move)
+        board = self.board
+        in_board = 0 <= i < len(board) and 0 <= j < len(board[0])
+        if in_board:
+            white_or_fruit = self.board[i][j] == 0 or (self.board[i][j] not in [-1, 1, 2])
+            return white_or_fruit
+        else:
+            return False
+
+    def game_is_tied(self):
+        """
+        Checks if the current state is a tie
+        @return: boolean
+        """
+        tie_score = False
+        if self.my_score == self.opponent_score:
+            tie_score = True
+        my_moves = self.steps_available(self.loc)
+        opponent_moves = self.steps_available(self.opponent_loc)
+        if my_moves == 0 and opponent_moves == 0 and tie_score:
+            return True
+        else:
+            penalty = self.penalty_score
+            if my_moves == 0 and opponent_moves != 0:
+                return (self.my_score - penalty) == self.opponent_score
+            elif my_moves != 0 and opponent_moves == 0:
+                return self.my_score == (self.opponent_score - penalty)
+            else:
+                return False
+
+    def is_game_won(self):
+        """
+        Checks if that state is a win state.
+        @rtype: bool
+        """
+        if self.game_is_tied():
+            return False
+        my_available_steps = self.steps_available(self.loc)
+        opp_available_steps = self.steps_available(self.opponent_loc)
+        if my_available_steps == 0 or opp_available_steps == 0:
+            return True
+        else:
+            return False
+
+    def is_end_game(self):
+        """
+        Checking if this plauer's board is end game board.
+        """
+        win = self.is_game_won()
+        tie = self.game_is_tied()
+        return win or tie
