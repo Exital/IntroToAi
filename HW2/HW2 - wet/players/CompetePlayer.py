@@ -1,65 +1,57 @@
 """
 Player for the competition
 """
-from players.AbstractPlayer import AbstractPlayer
-#TODO: you can import more modules, if needed
+from SearchAlgos import AlphaBeta
+from utils import MyPlayer
+import time as t
+DEBUG_PRINT = False
 
 
-class Player(AbstractPlayer):
+class Player(MyPlayer):
     def __init__(self, game_time, penalty_score):
-        AbstractPlayer.__init__(self, game_time, penalty_score) # keep the inheritance of the parent's (AbstractPlayer) __init__()
-        #TODO: initialize more fields, if needed, and the wanted algorithm from SearchAlgos.py
+        MyPlayer.__init__(self, game_time, penalty_score)
+        self.search_alg = AlphaBeta(None, None, None)
+        self.time_factor = 0.3
+        self.time_left = game_time
 
-
-    def set_game_params(self, board):
-        """Set the game parameters needed for this player.
-        This function is called before the game starts.
-        (See GameWrapper.py for more info where it is called)
-        input:
-            - board: np.array, a 2D matrix of the board.
-        No output is expected.
-        """
-        #TODO: erase the following line and implement this function.
-        raise NotImplementedError
-    
+    def heuristic(self):
+        result = self.get_game_score()
+        if DEBUG_PRINT:
+            print(f"value for compete heuristic is {result}")
+        return result
 
     def make_move(self, time_limit, players_score):
-        """Make move with this Player.
-        input:
-            - time_limit: float, time limit for a single turn.
-        output:
-            - direction: tuple, specifing the Player's movement, chosen from self.directions
-        """
-        #TODO: erase the following line and implement this function.
-        raise NotImplementedError
-
-
-    def set_rival_move(self, pos):
-        """Update your info, given the new position of the rival.
-        input:
-            - pos: tuple, the new position of the rival.
-        No output is expected
-        """
-        #TODO: erase the following line and implement this function.
-        raise NotImplementedError
-
-
-    def update_fruits(self, fruits_on_board_dict):
-        """Update your info on the current fruits on board (if needed).
-        input:
-            - fruits_on_board_dict: dict of {pos: value}
-                                    where 'pos' is a tuple describing the fruit's position on board,
-                                    'value' is the value of this fruit.
-        No output is expected.
-        """
-        #TODO: erase the following line and implement this function. In case you choose not to use this function, 
-        # use 'pass' instead of the following line.
-        raise NotImplementedError
-
-
-    ########## helper functions in class ##########
-    #TODO: add here helper functions in class, if needed
-
-
-    ########## helper functions for the search algorithm ##########
-    #TODO: add here the utility, succ, and perform_move functions used in AlphaBeta algorithm
+        limit = None
+        if self.search_alg is None:
+            raise NotImplementedError("utils(make_move): self.search_alg is None!")
+        time_start = t.time()
+        only_move = self.check_one_move()
+        if only_move is not None:
+            max_move = only_move
+        else:
+            depth = 1
+            max_move, max_val = self.search_alg.search(self, depth, True)
+            last_iteration_time = t.time() - time_start
+            next_iteration_max_time = 4 * last_iteration_time
+            time_until_now = t.time() - time_start
+            limit = self.time_left * self.time_factor
+            while time_until_now + next_iteration_max_time < limit:
+                depth += 1
+                iteration_start_time = t.time()
+                last_good_move = max_move
+                max_move, val = self.search_alg.search(self, depth, True)
+                if val == float('inf'):
+                    break
+                if val == float('-inf'):
+                    max_move = last_good_move
+                    break
+                last_iteration_time = t.time() - iteration_start_time
+                next_iteration_max_time = 4 * last_iteration_time
+                time_until_now = t.time() - time_start
+            self.time_left -= time_until_now
+        self.perform_move(maximizing_player=True, move=max_move)
+        if DEBUG_PRINT:
+            print(f"move chosen is {max_move}\n"
+                  f"time limit is {limit}\n"
+                  f"time left is {self.time_left}")
+        return max_move

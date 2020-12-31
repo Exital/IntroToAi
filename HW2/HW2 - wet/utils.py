@@ -4,9 +4,6 @@ import os
 import time as t
 from players.AbstractPlayer import AbstractPlayer
 DEBUG_PRINT = False
-#TODO: edit the alpha and beta initialization values for AlphaBeta algorithm.
-# instead of 'None', write the real initialization value, learned in class.
-# hint: you can use np.inf
 ALPHA_VALUE_INIT = float('-inf')
 BETA_VALUE_INIT = float('inf')
 
@@ -52,6 +49,10 @@ def get_board_from_csv(board_file_name):
 
 
 class MyPlayer(AbstractPlayer):
+    """
+    MyPlayer class is the master player that all player inherits.
+    It has many methods that used by all players.
+    """
     def __init__(self, game_time, penalty_score):
         AbstractPlayer.__init__(self, game_time,penalty_score)
         self.board = None
@@ -140,18 +141,27 @@ class MyPlayer(AbstractPlayer):
         self.update_fruits_on_board(init=True)
 
     def find_value(self, value_to_find):
+        """
+        finds a value on the board
+        :param value_to_find: The value to find on the board.
+        :return: A tuple, the location of the value on board.
+        """
         pos = np.where(self.board == value_to_find)
         # convert pos to tuple of ints
         return tuple(ax[0] for ax in pos)
 
     def update_players_locations(self):
+        """
+        Updates the player locations on the board.
+        """
         self.loc = self.find_value(1)
         self.opponent_loc = self.find_value(2)
 
     def update_fruits_on_board(self, forward=True, init=False):
         """
         Updates the fruits on the board, deleting or applying them.
-        forward - bool: true if we are moving forward, false for backwards.
+        :param forward: bool, True if time moves forward.
+        :param init: bool, True if no turn needs to be done but just update fruits on board.
         """
         if init:
             tick = 0
@@ -176,8 +186,8 @@ class MyPlayer(AbstractPlayer):
     def steps_available(self, loc):
         """
         Steps_available will calculate the steps available from a location
-        @type loc: tuple
-        @return: list - list of available moves
+        :param loc: tuple, the location of the player
+        :return: int - number of available moves for the player.
         """
         number_steps_available = []
         for d in self.directions:
@@ -186,6 +196,11 @@ class MyPlayer(AbstractPlayer):
         return len(number_steps_available)
 
     def valid_move(self, loc, move):
+        """
+        :param loc: tuple, the location of the player.
+        :param move: tuple, the direction we check if valid.
+        :return: bool, whether that move is valid from this location.
+        """
         i, j = tup_add(loc, move)
         board = self.board
         in_board = 0 <= i < len(board) and 0 <= j < len(board[0])
@@ -198,7 +213,7 @@ class MyPlayer(AbstractPlayer):
     def game_is_tied(self):
         """
         Checks if the current state is a tie
-        @return: boolean
+        :return: true if the game is tied.
         """
         tie_score = False
         if self.my_score == self.opponent_score:
@@ -219,7 +234,7 @@ class MyPlayer(AbstractPlayer):
     def is_game_won(self):
         """
         Checks if that state is a win state.
-        @rtype: bool
+        :return: true if game is won.
         """
         if self.game_is_tied():
             return False
@@ -232,13 +247,18 @@ class MyPlayer(AbstractPlayer):
 
     def is_end_game(self):
         """
-        Checking if this plauer's board is end game board.
+        Checking if this player's board is end game board.
+        :return: true if the board is end game board.
         """
         win = self.is_game_won()
         tie = self.game_is_tied()
         return win or tie
 
     def get_game_score(self):
+        """
+        Checks the game score and calculates the penalty into it.
+        :return: value between [-1,1] where 1 is the best to our player and -1 is the worst.
+        """
         if self.game_is_tied():
             return 0
         elif self.is_game_won():
@@ -253,6 +273,11 @@ class MyPlayer(AbstractPlayer):
             return (self.my_score - self.opponent_score) / (abs(self.my_score) + abs(self.opponent_score))
 
     def number_of_reachable_nodes(self, loc, limit=float('inf')):
+        """
+        :param loc: tuple, the location of the player.
+        :param limit: float, a limit number to stop searching.
+        :return: number of nodes reachable by the player on location loc.
+        """
         queue = list()
         queue.append(loc)
         index = 0
@@ -266,6 +291,11 @@ class MyPlayer(AbstractPlayer):
         return index
 
     def longest_route_till_block(self, loc, limit=6):
+        """
+        :param loc: tuple, location of the player.
+        :param limit: int, limit to stop searching.
+        :return: int, the longest road a player can achieve.
+        """
 
         def valid_move(loc, move, board):
             i, j = tup_add(loc, move)
@@ -293,6 +323,13 @@ class MyPlayer(AbstractPlayer):
         return longest_route_recursion(loc, limit, board_copy)
 
     def find_minimum_path(self, loc, dst, visited=[]):
+        """
+        find manhattan distance on board between loc and dst.
+        :param loc: tuple, location of player.
+        :param dst: tuple, destination location.
+        :param visited: list of nodes already visited on the path.
+        :return: int, minimum distance between location to destination.
+        """
         if loc == dst:
             return 0
         else:
@@ -307,6 +344,10 @@ class MyPlayer(AbstractPlayer):
             return curr_min
 
     def get_fruit_score_heuristic(self):
+        """
+        calculates fruits heuristic
+        :return: float, [-1,1] where 1 is the best for our player.
+        """
 
         def helper(loc):
             score = 0
@@ -330,6 +371,10 @@ class MyPlayer(AbstractPlayer):
             return (my_score - opponent_score) / factor
 
     def get_reachable_nodes_score(self):
+        """
+        Reachable nodes heuristic
+        :return: float, [-1,1].
+        """
         my_reachable = self.number_of_reachable_nodes(self.loc)
         opponent_reachable = self.number_of_reachable_nodes(self.opponent_loc)
         factor = my_reachable + opponent_reachable
@@ -340,6 +385,10 @@ class MyPlayer(AbstractPlayer):
             return (my_reachable - opponent_reachable) / factor
 
     def get_steps_available_score(self):
+        """
+        Steps heuristic
+        :return: float, [-1,1].
+        """
         my_steps = self.steps_available(self.loc)
         opponent_steps = self.steps_available(self.opponent_loc)
         both = my_steps + opponent_steps
@@ -349,6 +398,10 @@ class MyPlayer(AbstractPlayer):
             return (my_steps - opponent_steps) / both
 
     def get_longest_road_score(self):
+        """
+        Longest road heuristic
+        :return: float, [-1,1].
+        """
         my_road = self.longest_route_till_block(self.loc)
         opponent_road = self.longest_route_till_block(self.opponent_loc)
         both = my_road + opponent_road
@@ -358,8 +411,18 @@ class MyPlayer(AbstractPlayer):
             return (my_road - opponent_road) / both
 
     def heuristic(self):
+        """
+        The general heuristic for players.
+        The heuristic utilizes game score, fruits, longest road, moves available, nodes reachable.
+        :return: float between [-1,1] where 1 is the best for our player.
+        """
         game_score = (self.get_game_score(), 0.6)
-        fruits_score = (self.get_fruit_score_heuristic(), 0.25)
+        if len(self.fruits_dict) > 1:
+            # takes too much time to compute and not gaining much intelligence
+            # we can relay on the game score in order to count fruits.
+            fruits_score = (0, 0)
+        else:
+            fruits_score = (self.get_fruit_score_heuristic(), 0.25)
         road_score = (self.get_longest_road_score(), 0.05)
         steps_score = (self.get_steps_available_score(), 0.05)
         reachable_nodes_score = (self.get_reachable_nodes_score(), 0.05)
@@ -377,6 +440,12 @@ class MyPlayer(AbstractPlayer):
         return result
 
     def perform_move(self, maximizing_player: bool, move, reverse=False):
+        """
+        Moving the player on the board and updating fruits, score, etc.
+        :param maximizing_player: bool, True if our player.
+        :param move: Tuple, the move to perform.
+        :param reverse: bool, True if we would like to reverse the move.
+        """
         player = 1 if maximizing_player else 2
         location = self.loc if maximizing_player else self.opponent_loc
         old_i, old_j = location
@@ -415,6 +484,10 @@ class MyPlayer(AbstractPlayer):
             self.update_players_locations()
 
     def check_one_move(self):
+        """
+        Checks whether our player has only 1 valid move.
+        :return: tuple, the valid move.
+        """
         count_moves = 0
         one_move = None
         for direction in self.directions:

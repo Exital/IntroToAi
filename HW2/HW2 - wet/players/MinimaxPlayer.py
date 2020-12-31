@@ -2,9 +2,6 @@
 MiniMax Player
 """
 from utils import MyPlayer
-from utils import tup_add
-import numpy as np
-import time as t
 from SearchAlgos import MiniMax
 DEBUG_PRINT = False
 
