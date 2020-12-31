@@ -416,17 +416,11 @@ class MyPlayer(AbstractPlayer):
         The heuristic utilizes game score, fruits, longest road, moves available, nodes reachable.
         :return: float between [-1,1] where 1 is the best for our player.
         """
-        game_score = (self.get_game_score(), 0.6)
-        if len(self.fruits_dict) > 1:
-            # takes too much time to compute and not gaining much intelligence
-            # we can relay on the game score in order to count fruits.
-            fruits_score = (0, 0)
-        else:
-            fruits_score = (self.get_fruit_score_heuristic(), 0.25)
+        game_score = (self.get_game_score(), 0.85)
         road_score = (self.get_longest_road_score(), 0.05)
         steps_score = (self.get_steps_available_score(), 0.05)
         reachable_nodes_score = (self.get_reachable_nodes_score(), 0.05)
-        heuristics = [game_score, fruits_score, road_score, steps_score, reachable_nodes_score]
+        heuristics = [game_score, road_score, steps_score, reachable_nodes_score]
         result = 0
         for score, weight in heuristics:
             result += score * weight
@@ -436,7 +430,6 @@ class MyPlayer(AbstractPlayer):
             print(f"\tsteps score: {steps_score[0] * steps_score[1]}")
             print(f"\tlongest road score: {road_score[0] * road_score[1]}")
             print(f"\tgame score: {game_score[0] * game_score[1]}")
-            print(f"\tfruits score: {fruits_score[0] * fruits_score[1]}")
         return result
 
     def perform_move(self, maximizing_player: bool, move, reverse=False):
@@ -497,4 +490,3 @@ class MyPlayer(AbstractPlayer):
         if count_moves != 1:
             return None
         return one_move
-
