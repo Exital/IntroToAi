@@ -1,5 +1,6 @@
 from utils import csv2xy, AbstractClassifier
 from numpy import log2
+DEFAULT_CLASSIFICATION = "M"
 
 
 def log(x):
@@ -113,6 +114,8 @@ class ID3Node:
         :return: (True, diagnosis) or (False, None)
         :rtype: tuple
         """
+        if len(self.data.index) == 0:
+            return True, DEFAULT_CLASSIFICATION
         if len(self.data.diagnosis.unique()) == 1:
             result = (True, self.data["diagnosis"].iloc[0])
         else:
