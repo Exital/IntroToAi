@@ -56,7 +56,8 @@ class ID3Node:
         diagnosis = self.data["diagnosis"]
         values_list = values.tolist()
         # creating the separator's list
-        separators_list = [(x + y) / 2 for x, y in zip(values_list, values_list[1:])]
+        sorted_values = sorted(values_list, key=lambda x: x)
+        separators_list = [(x + y) / 2 for x, y in zip(sorted_values, sorted_values[1:])]
         best_ig = (float("-inf"), None)
 
         for separator in separators_list:
@@ -71,18 +72,18 @@ class ID3Node:
                     if diag == "M":
                         larger_positive += 1
 
-            # calculate the left son's IG
-            fraction = smaller_positive / size_smaller
-            entropy_left = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
-            # calculate the right son's IG
-            fraction = larger_positive / size_larger
-            entropy_right = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
             # calculate the root's IG
             fraction = (larger_positive+smaller_positive) / len(values)
             entropy_root = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
+            # calculate the left son's IG
+            fraction = smaller_positive / size_smaller if size_smaller != 0 else (larger_positive+smaller_positive) / len(values)
+            entropy_left = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
+            # calculate the right son's IG
+            fraction = larger_positive / size_larger if size_larger != 0 else (larger_positive+smaller_positive) / len(values)
+            entropy_right = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
 
             ig = entropy_root - entropy_left * size_smaller / len(values) - entropy_right*size_larger / len(values)
-            if ig > best_ig[0]:
+            if ig >= best_ig[0]:
                 best_ig = ig, separator
 
         if best_ig[1] is None:
@@ -102,7 +103,7 @@ class ID3Node:
 
         for feature in features:
             ig, separator = self._IG_for_feature(feature)
-            if ig > best_ig[1]:
+            if ig >= best_ig[1]:
                 best_ig = feature, ig, separator
         if best_ig[0] is None:
             raise ValueError("feature to separate not found!")
