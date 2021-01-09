@@ -1,5 +1,7 @@
 from utils import csv2xy, AbstractClassifier
 from numpy import log2
+import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
 DEFAULT_CLASSIFICATION = "M"
 
 
@@ -129,8 +131,9 @@ class ID3Classifier(AbstractClassifier):
         self.id3tree = None
 
     def fit(self, x, y):
-        x["diagnosis"] = y
-        self.id3tree = ID3Node(data=x)
+        data = x.copy()
+        data["diagnosis"] = y
+        self.id3tree = ID3Node(data=data)
 
     def predict(self, x, y):
 
@@ -156,8 +159,8 @@ class ID3Classifier(AbstractClassifier):
         if self.id3tree is None:
             raise ReferenceError("There was no fit first!")
 
-        x["diagnosis"] = y
-        data = x
+        data = x.copy()
+        data["diagnosis"] = y
         right_predictions = 0
         for row in range(len(data.index)):
             if walk_the_tree(self.id3tree, row) == data["diagnosis"].iloc[row]:
@@ -191,14 +194,14 @@ class ID3PruningNode(ID3Node):
                 # check if sons has to be pruned
                 prune, diag = self._check_if_son_has_to_be_pruned(data_left)
                 if prune:
-                    self.left = ID3PruningNode(diag=diag)
+                    self.left = ID3PruningNode(diag=diag, m=self.pruning_value)
                 else:
-                    self.left = ID3PruningNode(data=data_left)
+                    self.left = ID3PruningNode(data=data_left, m=self.pruning_value)
                 prune, diag = self._check_if_son_has_to_be_pruned(data_right)
                 if prune:
-                    self.right = ID3PruningNode(diag=diag)
+                    self.right = ID3PruningNode(diag=diag, m=self.pruning_value)
                 else:
-                    self.right = ID3PruningNode(data=data_right)
+                    self.right = ID3PruningNode(data=data_right, m=self.pruning_value)
 
     def _check_if_son_has_to_be_pruned(self, data):
         """
@@ -208,7 +211,7 @@ class ID3PruningNode(ID3Node):
         :return: (True, diag) if it has to be pruned otherwise (False, None)
         :rtype: tuple
         """
-        if len(data.index) <= self.pruning_value:
+        if len(data.index) < self.pruning_value:
             diag = self.data['diagnosis'].value_counts().idxmax()
             return True, diag
         else:
@@ -221,8 +224,35 @@ class ID3PruneClassifier(ID3Classifier):
         self.pruning_value = pruning_value
 
     def fit(self, x, y):
-        x["diagnosis"] = y
-        self.id3tree = ID3PruningNode(data=x, m=self.pruning_value)
+        data = x.copy()
+        data["diagnosis"] = y
+        self.id3tree = ID3PruningNode(data=data, m=self.pruning_value)
+
+
+def experiment(X=None, y=None, k_values=None, verbose=False):
+    if X is None or y is None:
+        X, y = csv2xy("data/train.csv")
+    k_values = [0, 4, 8, 12, 16, 20] if k_values is None else k_values
+    num_of_splits = 5
+    acc_per_split = []
+    kf = KFold(n_splits=num_of_splits, random_state=307965806, shuffle=True)
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+        acc_per_k = []
+        for k in k_values:
+            classifier = ID3PruneClassifier(pruning_value=k)
+            classifier.fit(X_train, y_train)
+            acc = classifier.predict(X_test, y_test)
+            acc_per_k.append(acc)
+        acc_per_split.append(acc_per_k)
+    avg = [(sum(col)) / len(col) for col in zip(*acc_per_split)]
+    if verbose:
+        plt.ylabel('accuracy')
+        plt.xlabel('M value')
+        plt.plot(k_values, avg)
+        plt.show()
 
 
 if __name__ == "__main__":
@@ -230,7 +260,6 @@ if __name__ == "__main__":
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("data/train.csv")
     test_x, test_y = csv2xy("data/test.csv")
-
     # creating a classifier instance
     classifier = ID3Classifier()
     # fitting the classifier
@@ -239,15 +268,5 @@ if __name__ == "__main__":
     accuracy = classifier.predict(test_x, test_y)
     print(accuracy)
 
-
-    # ID3 with pruning
-    # retrieving the data from the csv files
-    train_x, train_y = csv2xy("data/train.csv")
-    test_x, test_y = csv2xy("data/test.csv")
-    # creating a classifier instance
-    classifier = ID3PruneClassifier(pruning_value=8)
-    # fitting the classifier
-    classifier.fit(train_x, train_y)
-    # predicting on the test data set
-    accuracy = classifier.predict(test_x, test_y)
-    print(accuracy)
+    ks = [x for x in range(0, 10, 1)]
+    experiment(k_values=ks, verbose=True)
