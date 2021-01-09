@@ -165,6 +165,66 @@ class ID3Classifier(AbstractClassifier):
         return right_predictions / len(data.index)
 
 
+class ID3PruningNode(ID3Node):
+    def __init__(self, data=None, diag=None, m=8):
+        self.feature = None
+        self.slicing_val = None
+        self.left = None
+        self.right = None
+        self.data = data
+        self.diag = diag
+        self.pruning_value = m
+
+        # check if this is a pruned son
+        if diag is None:
+            # check if that is a leaf
+            leaf, diag = self._all_data_has_same_diag()
+            if leaf:
+                self.diag = diag
+            else:
+                # this is not a leaf so we update feature for slicing and slicing val
+                self.feature, _, self.slicing_val = self._choose_feature()
+                # slicing the dataframe
+                data_left = self.data[self.data[self.feature] <= self.slicing_val]
+                data_right = self.data[self.data[self.feature] > self.slicing_val]
+                # recursively creating more ID3Nodes
+                # check if sons has to be pruned
+                prune, diag = self._check_if_son_has_to_be_pruned(data_left)
+                if prune:
+                    self.left = ID3PruningNode(diag=diag)
+                else:
+                    self.left = ID3PruningNode(data=data_left)
+                prune, diag = self._check_if_son_has_to_be_pruned(data_right)
+                if prune:
+                    self.right = ID3PruningNode(diag=diag)
+                else:
+                    self.right = ID3PruningNode(data=data_right)
+
+    def _check_if_son_has_to_be_pruned(self, data):
+        """
+        checks if son has to be pruned
+        :param data: the data of the son
+        :type data: dataframe
+        :return: (True, diag) if it has to be pruned otherwise (False, None)
+        :rtype: tuple
+        """
+        if len(data.index) <= self.pruning_value:
+            diag = self.data['diagnosis'].value_counts().idxmax()
+            return True, diag
+        else:
+            return False, None
+
+
+class ID3PruneClassifier(ID3Classifier):
+    def __init__(self, pruning_value=8):
+        super().__init__()
+        self.pruning_value = pruning_value
+
+    def fit(self, x, y):
+        x["diagnosis"] = y
+        self.id3tree = ID3PruningNode(data=x, m=self.pruning_value)
+
+
 if __name__ == "__main__":
 
     # retrieving the data from the csv files
@@ -173,6 +233,19 @@ if __name__ == "__main__":
 
     # creating a classifier instance
     classifier = ID3Classifier()
+    # fitting the classifier
+    classifier.fit(train_x, train_y)
+    # predicting on the test data set
+    accuracy = classifier.predict(test_x, test_y)
+    print(accuracy)
+
+
+    # ID3 with pruning
+    # retrieving the data from the csv files
+    train_x, train_y = csv2xy("data/train.csv")
+    test_x, test_y = csv2xy("data/test.csv")
+    # creating a classifier instance
+    classifier = ID3PruneClassifier(pruning_value=8)
     # fitting the classifier
     classifier.fit(train_x, train_y)
     # predicting on the test data set
