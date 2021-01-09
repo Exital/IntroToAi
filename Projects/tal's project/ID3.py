@@ -1,6 +1,6 @@
-from utils import csv2xy, AbstractClassifier
+from utils import csv2xy, AbstractClassifier, graphPlotAndShow
+import argparse
 from numpy import log2
-import matplotlib.pyplot as plt
 from sklearn.model_selection import KFold
 DEFAULT_CLASSIFICATION = "M"
 
@@ -232,7 +232,8 @@ class ID3PruneClassifier(ID3Classifier):
 def experiment(X=None, y=None, k_values=None, verbose=False):
     if X is None or y is None:
         X, y = csv2xy("data/train.csv")
-    k_values = [0, 4, 8, 12, 16, 20] if k_values is None else k_values
+    if k_values is None:
+        k_values = [x for x in range(0, 25)]
     num_of_splits = 5
     acc_per_split = []
     kf = KFold(n_splits=num_of_splits, random_state=307965806, shuffle=True)
@@ -249,13 +250,19 @@ def experiment(X=None, y=None, k_values=None, verbose=False):
         acc_per_split.append(acc_per_k)
     avg = [(sum(col)) / len(col) for col in zip(*acc_per_split)]
     if verbose:
-        plt.ylabel('accuracy')
-        plt.xlabel('M value')
-        plt.plot(k_values, avg)
-        plt.show()
+        graphPlotAndShow(k_values, avg, "M value", "Accuracy")
+        zipped = list(zip(k_values, avg))
+        zipped.sort(key=lambda x: x[1], reverse=True)
+        best_k = zipped[0]
+        print(f"Kfold cross validation results:\n"
+              f"Best k={best_k[0]} with accuracy={best_k[1]}")
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-v', '-verbose', dest="verbose", action='store_true', help="Show more information")
+    args = parser.parse_args()
 
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("data/train.csv")
@@ -268,5 +275,4 @@ if __name__ == "__main__":
     accuracy = classifier.predict(test_x, test_y)
     print(accuracy)
 
-    ks = [x for x in range(0, 10, 1)]
-    experiment(k_values=ks, verbose=True)
+    experiment(verbose=args.verbose)
