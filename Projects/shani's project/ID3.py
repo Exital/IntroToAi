@@ -72,7 +72,7 @@ class TreeNode:
         val_feature_list = val_feature.tolist()
         # create the threshold's list
 
-        threshold_list = self.threshold_list(self, val_feature_list)
+        threshold_list = self.threshold_list(val_feature_list)
         ig_best_val = (float("-inf"), None)
 
         for divide in threshold_list:
@@ -109,19 +109,18 @@ class TreeNode:
         :return: (feature name, threshold)
         :rtype: tuple
         """
-        features = self.data.keys()
-        features_list =  features.tolist()
-        features_list = features_list[:-1]
+        features = self.data.keys().tolist()
+        features = features[:-1]
 
-        ig_best_val = None, float("-inf"), None
-        for f in features_list:
-            ig_val, threshold = self.IG_for_feature(f)
-            if ig_val >= ig_best_val:
-                ig_best_val = f, ig_val, threshold
+        best_ig = []
 
-        if ig_best_val[0] is None:
-            raise ValueError("There is no feature to divide")
-        return ig_best_val
+        for feature in features:
+            ig, threshold = self._IG_for_feature(feature)
+            value = ig, feature, threshold
+            best_ig.append(value)
+        best_ig.sort(key=lambda x: x[0], reverse=True)
+        ig, feature, threshold = best_ig[0]
+        return feature, threshold
 
 
     def all_same_data(self):
@@ -130,14 +129,13 @@ class TreeNode:
         :return: (None, False) OR (detection, True)
         :rtype: tuple
         """
-
         if len(self.data.index) == 0:
             return True, DEFAULT_DIAGNOSIS
         values = self.data["diagnosis"].tolist()
         last_val = None
         for val1,val2 in zip(values,values[1:]):
             if val1 != val2:
-                return (None, False)
+                return None, False
             else:
                 last_val = val2
         return last_val, True
@@ -190,7 +188,28 @@ class ID3Classifier:
         :return: accuracy [0,1]
         :rtype: float
         """
-        cur_node = TreeNode(data=x) #to check
+        def walk_the_tree(node: TreeNode, row):
+            # if node.is_leaf():
+            #     return node.diag
+            # else:
+            #     feature = node.feature
+            #     value = data[feature].iloc[row]
+            #     if value <= node.slicing_val:
+            #         return walk_the_tree(node.left, row)
+            #     else:
+            #         return walk_the_tree(node.right, row)
+            res = None
+            while not node.is_leaf():
+                feature_node = node.feature
+                value = data[feature].iloc[row]
+                if value <= node.threshold:
+                    node = node.left
+                else:
+                    node = node.right
+            res = node.diag
+            return res
+
+
         if cur_node.is_leaf():
              return cur_node.diag
         else:
