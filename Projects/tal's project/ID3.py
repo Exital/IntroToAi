@@ -139,26 +139,6 @@ class ID3Classifier(AbstractClassifier):
         :return: (accuracy, loss)
         :rtype: tuple
         """
-
-        def walk_the_tree(node: ID3Node, row):
-            """
-            This function is a recursive function that walks the tree till it reaches a leaf.
-            :param node: An id3 Node
-            :type node: ID3Node
-            :param row: row number on the dataframe
-            :type row: int
-            :return: diagnosis
-            """
-            if node.is_leaf():
-                return node.diag
-            else:
-                feature = node.feature
-                value = data[feature].iloc[row]
-                if value <= node.slicing_val:
-                    return walk_the_tree(node.left, row)
-                else:
-                    return walk_the_tree(node.right, row)
-
         if self.id3tree is None:
             raise ReferenceError("There was no fit first!")
 
@@ -169,7 +149,7 @@ class ID3Classifier(AbstractClassifier):
         false_positive = 0
         num_of_samples = len(data.index)
         for row in range(len(data.index)):
-            prediction = walk_the_tree(self.id3tree, row)
+            prediction = self.walk_the_tree(self.id3tree, row, data)
             if prediction == data["diagnosis"].iloc[row]:
                 right_predictions += 1
             else:
@@ -180,6 +160,27 @@ class ID3Classifier(AbstractClassifier):
         acc = right_predictions / num_of_samples
         loss = (0.1 * false_positive + false_negative) / num_of_samples
         return acc, loss
+
+    def walk_the_tree(self, node: ID3Node, row, data):
+        """
+        This function is a recursive function that walks the tree till it reaches a leaf.
+        :param node: An id3 Node
+        :type node: ID3Node
+        :param row: row number on the dataframe
+        :type row: int
+        :param data: the dataset
+        :type data: dataframe
+        :return: diagnosis
+        """
+        if node.is_leaf():
+            return node.diag
+        else:
+            feature = node.feature
+            value = data[feature].iloc[row]
+            if value <= node.slicing_val:
+                return self.walk_the_tree(node.left, row, data)
+            else:
+                return self.walk_the_tree(node.right, row, data)
 
 
 class ID3PruningNode(ID3Node):
@@ -258,7 +259,7 @@ def experiment(X=None, y=None, k_values=None, verbose=False):
     :type verbose: bool
     """
     if X is None or y is None:
-        X, y = csv2xy("data/train.csv")
+        X, y = csv2xy("train.csv")
     if k_values is None:
         k_values = [x for x in range(0, 25)]
     num_of_splits = 5
@@ -272,7 +273,7 @@ def experiment(X=None, y=None, k_values=None, verbose=False):
         for k in k_values:
             classifier = ID3PruneClassifier(pruning_value=k)
             classifier.fit(X_train, y_train)
-            acc = classifier.predict(X_test, y_test)
+            acc, loss = classifier.predict(X_test, y_test)
             acc_per_k.append(acc)
         acc_per_split.append(acc_per_k)
     avg = [(sum(col)) / len(col) for col in zip(*acc_per_split)]
@@ -282,7 +283,7 @@ def experiment(X=None, y=None, k_values=None, verbose=False):
         zipped.sort(key=lambda x: x[1], reverse=True)
         best_k = zipped[0]
         print(f"Kfold cross validation results:\n"
-              f"Best k={best_k[0]} with accuracy={best_k[1]}")
+              f"Best M={best_k[0]} with accuracy={best_k[1]}")
 
 
 if __name__ == "__main__":
