@@ -58,19 +58,18 @@ class CostSensitiveID3Node(ID3Node):
                     size_larger += 1
                     if diag == "M":
                         larger_positive += 1
-            false_positive = self.costFP
-            false_negative = self.costFN
+            false_positive_cost = self.costFP
+            false_negative_cost = self.costFN
             # calculate the root's IG
-            fraction = (larger_positive+smaller_positive) / len(values)
-            entropy_root = -fraction * log(fraction) * false_positive - ((1 - fraction) * log(1 - fraction)) * false_negative
+            num_positive = smaller_positive + larger_positive
+            num_negative = len(values) - num_positive
+            costs_root = false_negative_cost * num_positive + false_positive_cost * num_negative
             # calculate the left son's IG
-            fraction = smaller_positive / size_smaller if size_smaller != 0 else (larger_positive+smaller_positive) / len(values)
-            entropy_left = -fraction * log(fraction) * false_positive - ((1 - fraction) * log(1 - fraction)) * false_negative
+            costs_left = false_negative_cost * smaller_positive + false_positive_cost * (size_smaller - smaller_positive)
             # calculate the right son's IG
-            fraction = larger_positive / size_larger if size_larger != 0 else (larger_positive+smaller_positive) / len(values)
-            entropy_right = -fraction * log(fraction) * false_positive - ((1 - fraction) * log(1 - fraction)) * false_negative
+            costs_right = false_negative_cost * larger_positive + false_negative_cost * (size_larger - larger_positive)
 
-            ig = entropy_root - entropy_left * size_smaller / len(values) - entropy_right*size_larger / len(values)
+            ig = costs_root - costs_left * size_smaller / len(values) - costs_right * size_larger / len(values)
             if ig >= best_ig[0]:
                 best_ig = ig, separator
 
