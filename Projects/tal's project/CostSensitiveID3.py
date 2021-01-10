@@ -92,8 +92,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # retrieving the data from the csv files
-    train_x, train_y = csv2xy("data/train.csv")
-    test_x, test_y = csv2xy("data/test.csv")
+    train_x, train_y = csv2xy("train.csv")
+    test_x, test_y = csv2xy("test.csv")
     # creating a classifier instance
     classifier = ID3CostSensitiveClassifier()
     # fitting the classifier
