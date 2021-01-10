@@ -1,12 +1,6 @@
-from utils import csv2xy, AbstractClassifier, graphPlotAndShow
+from utils import csv2xy, AbstractClassifier, graphPlotAndShow, log, DEFAULT_CLASSIFICATION
 import argparse
-from numpy import log2
 from sklearn.model_selection import KFold
-DEFAULT_CLASSIFICATION = "M"
-
-
-def log(x):
-    return x if x == 0 else log2(x)
 
 
 class ID3Node:
@@ -136,6 +130,15 @@ class ID3Classifier(AbstractClassifier):
         self.id3tree = ID3Node(data=data)
 
     def predict(self, x, y):
+        """
+        predicts the diagnosis for data set x and computes accuracy and loss for y
+        :param x: dataset
+        :type x: dataframe
+        :param y: diagnosis
+        :type y: dataframe
+        :return: (accuracy, loss)
+        :rtype: tuple
+        """
 
         def walk_the_tree(node: ID3Node, row):
             """
@@ -162,10 +165,21 @@ class ID3Classifier(AbstractClassifier):
         data = x.copy()
         data["diagnosis"] = y
         right_predictions = 0
+        false_negative = 0
+        false_positive = 0
+        num_of_samples = len(data.index)
         for row in range(len(data.index)):
-            if walk_the_tree(self.id3tree, row) == data["diagnosis"].iloc[row]:
+            prediction = walk_the_tree(self.id3tree, row)
+            if prediction == data["diagnosis"].iloc[row]:
                 right_predictions += 1
-        return right_predictions / len(data.index)
+            else:
+                if prediction == "M":
+                    false_positive += 1
+                else:
+                    false_negative += 1
+        acc = right_predictions / num_of_samples
+        loss = (0.1 * false_positive + false_negative) / num_of_samples
+        return acc, loss
 
 
 class ID3PruningNode(ID3Node):
@@ -230,6 +244,19 @@ class ID3PruneClassifier(ID3Classifier):
 
 
 def experiment(X=None, y=None, k_values=None, verbose=False):
+    """
+    This function uses sklearn's kFold to cross validate and find the best
+    M value for the pruning.
+    The only parameter you need is to set verbose to True so you can see output.
+    :param X: X dataset
+    :type X: dataframe
+    :param y: y dataset
+    :type y: dataframe
+    :param k_values: values to cross validate
+    :type k_values: list
+    :param verbose: True if you want to see graph and summary
+    :type verbose: bool
+    """
     if X is None or y is None:
         X, y = csv2xy("data/train.csv")
     if k_values is None:
@@ -265,14 +292,17 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # retrieving the data from the csv files
-    train_x, train_y = csv2xy("data/train.csv")
-    test_x, test_y = csv2xy("data/test.csv")
+    train_x, train_y = csv2xy("train.csv")
+    test_x, test_y = csv2xy("test.csv")
     # creating a classifier instance
     classifier = ID3Classifier()
     # fitting the classifier
     classifier.fit(train_x, train_y)
     # predicting on the test data set
-    accuracy = classifier.predict(test_x, test_y)
+    accuracy, loss = classifier.predict(test_x, test_y)
     print(accuracy)
+    if args.verbose:
+        print(f"loss without cost optimizing={loss}")
 
-    experiment(verbose=args.verbose)
+    # TODO un-comment this experiment function and choose verbose = True (or run with -v flag) to see results.
+    # experiment(verbose=args.verbose)
