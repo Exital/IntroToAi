@@ -1,15 +1,16 @@
 from ID3 import ID3Node, ID3Classifier
 import argparse
-from utils import csv2xy
+from utils import csv2xy, log, DEFAULT_CLASSIFICATION, graphPlotAndShow
+from sklearn.model_selection import KFold
 
 
 class CostSensitiveID3Node(ID3Node):
-    def __init__(self, data):
+    def __init__(self, data, costFP=1, costFN=10):
 
         self.costTP = 1
-        self.costFP = 10
+        self.costFP = costFP
         self.costTN = 1
-        self.costFN = 100
+        self.costFN = costFN
 
         self.feature = None
         self.slicing_val = None
@@ -34,11 +35,8 @@ class CostSensitiveID3Node(ID3Node):
 
     def _IG_for_feature(self, feature):
         """
-        Using the same API of ID3Node and utilizing it for cost efficiency.
-        This function calculate costs and return which separator has the minimum cost.
-        :param feature: feature name
-        :type feature: str
-        :return: (minimum cost, separator)
+        This function will check what is the best separator value.
+        :return: (Best IG for this feature, separator value)
         :rtype: tuple
         """
         values = self.data[feature]
@@ -47,65 +45,38 @@ class CostSensitiveID3Node(ID3Node):
         # creating the separator's list
         sorted_values = sorted(values_list, key=lambda x: x)
         separators_list = [(x + y) / 2 for x, y in zip(sorted_values, sorted_values[1:])]
-        lowest_cost = (float("inf"), None)
+        best_ig = (float("-inf"), None)
 
         for separator in separators_list:
-            smaller_true_positive, smaller_false_positive, larger_true_positive, larger_false_positive = 0, 0, 0, 0
+            size_smaller, smaller_positive, size_larger, larger_positive = 0, 0, 0, 0
             for val, diag in zip(values, diagnosis):
                 if val <= separator:
+                    size_smaller += 1
                     if diag == "M":
-                        smaller_true_positive += 1
-                    else:
-                        smaller_false_positive += 1
+                        smaller_positive += 1
                 else:
+                    size_larger += 1
                     if diag == "M":
-                        larger_true_positive += 1
-                    else:
-                        smaller_false_positive += 1
+                        larger_positive += 1
+            false_positive = self.costFP
+            false_negative = self.costFN
+            # calculate the root's IG
+            fraction = (larger_positive+smaller_positive) / len(values)
+            entropy_root = -fraction * log(fraction) * false_positive - ((1 - fraction) * log(1 - fraction)) * false_negative
+            # calculate the left son's IG
+            fraction = smaller_positive / size_smaller if size_smaller != 0 else (larger_positive+smaller_positive) / len(values)
+            entropy_left = -fraction * log(fraction) * false_positive - ((1 - fraction) * log(1 - fraction)) * false_negative
+            # calculate the right son's IG
+            fraction = larger_positive / size_larger if size_larger != 0 else (larger_positive+smaller_positive) / len(values)
+            entropy_right = -fraction * log(fraction) * false_positive - ((1 - fraction) * log(1 - fraction)) * false_negative
 
-            # left son costs
-            left_cost_for_all_positive = smaller_true_positive * self.costTP + smaller_false_positive * self.costFP
-            left_cost_for_all_negative = smaller_false_positive * self.costTN + smaller_true_positive * self.costFN
-            if left_cost_for_all_negative == 0 and left_cost_for_all_positive == 0:
-                left_entropy = 0
-            else:
-                left_entropy = (left_cost_for_all_positive * left_cost_for_all_negative) / (left_cost_for_all_positive + left_cost_for_all_negative)
-            # right son costs
-            right_cost_for_all_positive = larger_true_positive * self.costTP + larger_false_positive * self.costFP
-            right_cost_for_all_negative = larger_false_positive * self.costTN + larger_true_positive * self.costFN
-            if right_cost_for_all_negative == 0 and right_cost_for_all_positive == 0:
-                right_entropy = 0
-            else:
-                right_entropy = (right_cost_for_all_positive * right_cost_for_all_negative) / (right_cost_for_all_positive + right_cost_for_all_negative)
+            ig = entropy_root - entropy_left * size_smaller / len(values) - entropy_right*size_larger / len(values)
+            if ig >= best_ig[0]:
+                best_ig = ig, separator
 
-            total_cost = 2 * (left_entropy + right_entropy)
-
-            if total_cost < lowest_cost[0]:
-                lowest_cost = total_cost, separator
-
-        if lowest_cost[1] is None:
+        if best_ig[1] is None:
             raise ValueError("separator not found!")
-        return lowest_cost
-
-    def _choose_feature(self):
-        """
-        Using the same API of ID3Node and utilizing it for cost efficiency.
-        Will choose a feature to slice for that node according to all feature's lowest cost.
-        :return: (feature name, feature's cost, separator value)
-        :rtype: tuple
-        """
-        features = self.data.keys().tolist()
-        features = features[:-1]
-
-        lowest_cost = None, float("inf"), None
-
-        for feature in features:
-            cost, separator = self._IG_for_feature(feature)
-            if cost < lowest_cost[1]:
-                lowest_cost = feature, cost, separator
-        if lowest_cost[0] is None:
-            raise ValueError("feature to separate not found!")
-        return lowest_cost
+        return best_ig
 
 
 class ID3CostSensitiveClassifier(ID3Classifier):

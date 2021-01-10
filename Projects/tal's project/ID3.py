@@ -1,12 +1,6 @@
-from utils import csv2xy, AbstractClassifier, graphPlotAndShow
+from utils import csv2xy, AbstractClassifier, graphPlotAndShow, log, DEFAULT_CLASSIFICATION
 import argparse
-from numpy import log2
 from sklearn.model_selection import KFold
-DEFAULT_CLASSIFICATION = "M"
-
-
-def log(x):
-    return x if x == 0 else log2(x)
 
 
 class ID3Node:
