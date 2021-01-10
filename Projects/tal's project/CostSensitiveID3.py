@@ -7,8 +7,8 @@ class CostSensitiveID3Node(ID3Node):
     def __init__(self, data):
 
         self.costTP = 1
-        self.costFP = 1
-        self.costTN = 0
+        self.costFP = 10
+        self.costTN = 1
         self.costFN = 100
 
         self.feature = None
@@ -49,8 +49,8 @@ class CostSensitiveID3Node(ID3Node):
         separators_list = [(x + y) / 2 for x, y in zip(sorted_values, sorted_values[1:])]
         lowest_cost = (float("inf"), None)
 
-        smaller_true_positive, smaller_false_positive, larger_true_positive, larger_false_positive = 0, 0, 0, 0
         for separator in separators_list:
+            smaller_true_positive, smaller_false_positive, larger_true_positive, larger_false_positive = 0, 0, 0, 0
             for val, diag in zip(values, diagnosis):
                 if val <= separator:
                     if diag == "M":
@@ -66,11 +66,17 @@ class CostSensitiveID3Node(ID3Node):
             # left son costs
             left_cost_for_all_positive = smaller_true_positive * self.costTP + smaller_false_positive * self.costFP
             left_cost_for_all_negative = smaller_false_positive * self.costTN + smaller_true_positive * self.costFN
-            left_entropy = (left_cost_for_all_positive * left_cost_for_all_negative) / (left_cost_for_all_positive + left_cost_for_all_negative)
+            if left_cost_for_all_negative == 0 and left_cost_for_all_positive == 0:
+                left_entropy = 0
+            else:
+                left_entropy = (left_cost_for_all_positive * left_cost_for_all_negative) / (left_cost_for_all_positive + left_cost_for_all_negative)
             # right son costs
             right_cost_for_all_positive = larger_true_positive * self.costTP + larger_false_positive * self.costFP
             right_cost_for_all_negative = larger_false_positive * self.costTN + larger_true_positive * self.costFN
-            right_entropy = (right_cost_for_all_positive * right_cost_for_all_negative) / (right_cost_for_all_positive + right_cost_for_all_negative)
+            if right_cost_for_all_negative == 0 and right_cost_for_all_positive == 0:
+                right_entropy = 0
+            else:
+                right_entropy = (right_cost_for_all_positive * right_cost_for_all_negative) / (right_cost_for_all_positive + right_cost_for_all_negative)
 
             total_cost = 2 * (left_entropy + right_entropy)
 
