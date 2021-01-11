@@ -12,7 +12,7 @@ class ID3CostSensitiveClassifier(ID3Classifier):
         self.cost_FP = cost_fp
 
     def fit(self, x, y):
-        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.33, random_state=42)
+        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.60, random_state=420)
         train_data = X_train.copy()
         train_data["diagnosis"] = y_train
         validation_data = X_test.copy()
@@ -20,17 +20,38 @@ class ID3CostSensitiveClassifier(ID3Classifier):
         self.validation = validation_data
         id3tree = ID3Node(data=train_data)
 
-    # TODO continue to write the prune function
-    # def prune(self, node: ID3Node):
-    #     if node.is_leaf():
-    #         return node
-    #     node.left = self.prune(node.left)
-    #     node.right = self.prune(node.right)
-    #
-    #     err_prune, err_no_prune = 0, 0
-    #     for row in range(len(self.validation.index)):
-    #         prediction = self.walk_the_tree(node, row, self.validation)
-    #         if
+        pruned_tree = self.prune(id3tree, self.validation)
+        self.id3tree = pruned_tree
+
+    def prune(self, node: ID3Node, validation):
+        if len(validation.index) == 0:
+            return node
+        if node.is_leaf():
+            return node
+
+        # slicing the dataframe
+        validation_left = validation[validation[node.feature] <= node.slicing_val]
+        validation_right = validation[validation[node.feature] > node.slicing_val]
+
+        node.left = self.prune(node.left, validation_left)
+        node.right = self.prune(node.right, validation_right)
+        err_prune, err_no_prune = 0, 0
+        prune_diagnostic = self.decide_leaf_diagnosis_by_costs(node, validation)
+        for row in range(len(validation.index)):
+            prediction = self.walk_the_tree(node, row, validation)
+            real_truth = validation["diagnosis"].iloc[row]
+            err_prune += self.evaluate(real_truth, prune_diagnostic)
+            err_no_prune += self.evaluate(real_truth, prediction)
+
+        # it will be better to prune
+        if err_prune < err_no_prune:
+            node.data = None
+            node.feature = None
+            node.left = None
+            node.right = None
+            node.slicing_val = None
+            node.diag = prune_diagnostic
+        return node
 
     def evaluate(self, real_truth, predicted_truth):
         if real_truth != predicted_truth:
@@ -38,10 +59,18 @@ class ID3CostSensitiveClassifier(ID3Classifier):
         else:
             return 0
 
-    # TODO continue decide leaf diagnosis
-    # def decide_leaf_diagnosis_by_costs(self, node: ID3Node):
-    #     data = node.data
-    #     diagnosis = data["diagnosis"]
+    def decide_leaf_diagnosis_by_costs(self, node: ID3Node, validation):
+        data = validation
+        count = data["diagnosis"].value_counts()
+        if "M" in count.index:
+            m_count = count["M"]
+        else:
+            m_count = 0
+        if "B" in count.index:
+            b_count = count["B"]
+        else:
+            b_count = 0
+        return "M" if b_count * self.cost_FP < m_count * self.cost_FN else "B"
 
 
 if __name__ == "__main__":
