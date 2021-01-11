@@ -70,16 +70,15 @@ class TreeNode:
         :rtype: tuple
         """
         detection = self.data["diagnosis"]   # diagnosis
+        detection_list = detection.tolist()
         val_feature = self.data[feature_name]  # values
         val_feature_list = val_feature.tolist()
         # create the threshold's list
         threshold_list = self.cal_threshold_list(val_feature_list)
 
         ig_best_val = (float("-inf"), None)
-        if len(detection) != len(val_feature):
-            print("shit")
         for divider in threshold_list:
-            size_biger, biger_posetive, size_smaller, smaller_positive = self.update_values(val_feature, detection, divider)
+            size_biger, biger_posetive, size_smaller, smaller_positive = self.update_values(val_feature_list, detection_list, divider)
 
             # calculate root's IG
             root_ig = smaller_positive + biger_posetive
@@ -108,7 +107,6 @@ class TreeNode:
         if ig_best_val[1] is None:
             raise ValueError("divider does not found")
         return ig_best_val
-
 
 
     def update_values(self ,val_feature, detection, divider):
@@ -162,14 +160,13 @@ class TreeNode:
         features = self.data.keys().tolist()
         features = features[:-1]
 
-        best_ig = []
+        best_ig = float('-inf'), None, None
 
         for feature in features:
             ig, threshold = self.IG_for_feature(feature)
-            value = ig, feature, threshold
-            best_ig.append(value)
-        best_ig.sort(key=lambda x: x[0], reverse=True)
-        ig, feature, threshold = best_ig[0]
+            if best_ig[0] <= ig:
+                best_ig = ig, feature, threshold
+        _, feature, threshold = best_ig
         return feature, threshold
 
 
@@ -276,6 +273,38 @@ class ID3Classifier:
         return correct_predict / len(data.index)
 
 
+def check_if_node_has_to_be_pruned(self):
+    """
+    todo this function return true if the node we are checking has to be pruned
+    :return:
+    :rtype:
+    """
+    pass
+
+
+def build_id3_tree_with_pruning(data, prune_value) -> TreeNode:
+    """
+    todo this function builds a tree with pruned
+    :return:
+    :rtype:
+    """
+    pass
+
+
+class TreeNodeWithPruneClassifier(ID3Classifier):
+    """
+    todo this classifier is for prunning prediction
+    """
+    def __init__(self):
+        pass
+
+    def fit(self, x, y):
+        pass
+
+
+
+
+
 if __name__ == "__main__":
 
     train_x, train_y = get_data_from_csv("train.csv")
@@ -286,3 +315,11 @@ if __name__ == "__main__":
 
     value_prediction = classifier.predict(test_x, test_y)
     print(value_prediction)
+
+    node = TreeNodeWithPrune(data)
+    node.check_if_node_has_to_be_pruned()
+
+    classifier = TreeNodeWithPruneClassifier()
+    classifier.fit(train_x, train_y)
+    acc = classifier.predict(test_x, test_y)
+    print(acc)
