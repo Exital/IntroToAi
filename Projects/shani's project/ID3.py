@@ -69,18 +69,19 @@ class TreeNode:
         :return: (IG for the feature, threshold)
         :rtype: tuple
         """
-        detection = self.data["diagnosis"]   #diagnosis
-        val_feature = self.data[feature_name]  #values
+        detection = self.data["diagnosis"]   # diagnosis
+        val_feature = self.data[feature_name]  # values
         val_feature_list = val_feature.tolist()
         # create the threshold's list
         threshold_list = self.cal_threshold_list(val_feature_list)
 
         ig_best_val = (float("-inf"), None)
-
+        if len(detection) != len(val_feature):
+            print("shit")
         for divider in threshold_list:
             size_biger, biger_posetive, size_smaller, smaller_positive = self.update_values(val_feature, detection, divider)
 
-             # calculate root's IG
+            # calculate root's IG
             root_ig = smaller_positive + biger_posetive
             size_val_feature = len(val_feature)
             fraction = root_ig/size_val_feature
@@ -90,22 +91,23 @@ class TreeNode:
             if size_smaller != 0:
                 fraction = smaller_positive / size_smaller
             else:
-                fraction = (biger_posetive+smaller_positive)/ size_val_feature
+                fraction = (biger_posetive+smaller_positive) / size_val_feature
             left_entropy = self.calculate_entropy(fraction)
 
             # calculate right son's IG
             if size_biger != 0:
-                 fraction = biger_posetive / size_biger
+                fraction = biger_posetive / size_biger
             else:
                 fraction = (biger_posetive+smaller_positive)/size_val_feature
             right_entropy = self.calculate_entropy(fraction)
 
             ig_val = root_entropy - left_entropy * size_smaller / size_val_feature - (right_entropy*size_biger) / size_val_feature
-            if ig_val >= ig_best_val[0]: ig_best_val = ig_val, divider
+            if ig_val >= ig_best_val[0]:
+                ig_best_val = ig_val, divider
 
         if ig_best_val[1] is None:
-            raise  ValueError("divider does not found")
-        return  ig_best_val
+            raise ValueError("divider does not found")
+        return ig_best_val
 
 
 
@@ -120,14 +122,14 @@ class TreeNode:
         """
         size_biger, biger_posetive, size_smaller, smaller_positive = 0, 0, 0, 0
         for i in range(len(val_feature)):
-             if val_feature[i] <= divider:
+            if val_feature[i] <= divider:
                 size_smaller += 1
                 if detection[i] == "M":
                     smaller_positive += 1
-             else:
+            else:
                 size_biger += 1
                 if detection[i] == "M":
-                    smaller_positive += 1
+                    biger_posetive += 1
 
         return size_biger, biger_posetive, size_smaller, smaller_positive
 
@@ -139,10 +141,10 @@ class TreeNode:
         :rtype: list
         """
         soreted_values = sorted(val_feature_list, key=lambda x: x)
-        list_res =[]
-        for i in range(len(soreted_values)): #,maybe -1
+        list_res = []
+        for i in range(len(soreted_values) - 1):
             sum = soreted_values[i] + soreted_values[i+1]
-            res = sum/2
+            res = sum / 2
             list_res.append(res)
 
         return list_res
@@ -203,7 +205,7 @@ def build_id3_tree(data: pd.DataFrame) -> TreeNode:
         node.diag = diag
     else:
         # if check_leaf = false, means that this is not a leaf. therefore we update feature for slicing and slicing val
-        node.feature, _,node.threshold = node.choose_feature()
+        node.feature, node.threshold = node.choose_feature()
         #in this part we slice the dataframe
         right_data = node.data[node.data[node.feature] > node.threshold]
         left_data = node.data[node.data[node.feature] <= node.threshold]
@@ -230,7 +232,7 @@ class ID3Classifier:
         """
         data = x.copy()
         data["diagnosis"] = y
-        self.ID3TreeNode = TreeNode(data=data)
+        self.ID3TreeNode = build_id3_tree(data)
 
     def predict(self, x, y):
         """
@@ -270,7 +272,7 @@ class ID3Classifier:
         correct_predict = 0
         for row in range(len(data.index)):
             if tour_tree(self.ID3TreeNode, row) == data["diagnosis"].iloc[row]:
-                    correct_predict += 1
+                correct_predict += 1
         return correct_predict / len(data.index)
 
 
