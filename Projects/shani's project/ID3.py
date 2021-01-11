@@ -211,6 +211,7 @@ def build_id3_tree(data: pd.DataFrame) -> TreeNode:
         node.left = build_id3_tree(data=left_data)
         node.right = build_id3_tree(data=right_data)
 
+    return node
 
 class ID3Classifier:
     """
@@ -262,7 +263,7 @@ class ID3Classifier:
             return res
 
         if self.ID3TreeNode is None:
-            raise  ReferenceError("fit is missing")
+            raise ReferenceError("fit is missing")
 
         data = x.copy()
         data["diagnosis"] = y
@@ -271,3 +272,15 @@ class ID3Classifier:
             if tour_tree(self.ID3TreeNode, row) == data["diagnosis"].iloc[row]:
                     correct_predict += 1
         return correct_predict / len(data.index)
+
+
+if __name__ == "__main__":
+
+    train_x, train_y = get_data_from_csv("train.csv")
+    test_x, test_y = get_data_from_csv("test.csv")
+
+    classifier = ID3Classifier()
+    classifier.fit(train_x, train_y)
+
+    value_prediction = classifier.predict(test_x, test_y)
+    print(value_prediction)
