@@ -16,6 +16,27 @@ class AbstractClassifier(ABC):
     def predict(self, x, y):
         pass
 
+    def walk_the_tree(self, node, row, data):
+        """
+        This function is a recursive function that walks the tree till it reaches a leaf.
+        :param node: A node that has diag, slicing_val members and is_leaf method.
+        :type node: ID3Node
+        :param row: row number on the dataframe
+        :type row: int
+        :param data: the dataset
+        :type data: dataframe
+        :return: diagnosis
+        """
+        if node.is_leaf():
+            return node.diag
+        else:
+            feature = node.feature
+            value = data[feature].iloc[row]
+            if value <= node.slicing_val:
+                return self.walk_the_tree(node.left, row, data)
+            else:
+                return self.walk_the_tree(node.right, row, data)
+
 
 def csv2xy(file):
     df = pd.read_csv(file)

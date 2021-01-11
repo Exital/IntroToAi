@@ -161,27 +161,6 @@ class ID3Classifier(AbstractClassifier):
         loss = (0.1 * false_positive + false_negative) / num_of_samples
         return acc, loss
 
-    def walk_the_tree(self, node: ID3Node, row, data):
-        """
-        This function is a recursive function that walks the tree till it reaches a leaf.
-        :param node: An id3 Node
-        :type node: ID3Node
-        :param row: row number on the dataframe
-        :type row: int
-        :param data: the dataset
-        :type data: dataframe
-        :return: diagnosis
-        """
-        if node.is_leaf():
-            return node.diag
-        else:
-            feature = node.feature
-            value = data[feature].iloc[row]
-            if value <= node.slicing_val:
-                return self.walk_the_tree(node.left, row, data)
-            else:
-                return self.walk_the_tree(node.right, row, data)
-
 
 class ID3PruningNode(ID3Node):
     def __init__(self, data=None, diag=None, m=8):

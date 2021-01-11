@@ -1,6 +1,6 @@
 from ID3 import ID3Node, ID3Classifier
 import argparse
-from utils import csv2xy, log, DEFAULT_CLASSIFICATION, graphPlotAndShow
+from utils import csv2xy, graphPlotAndShow
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import KFold
 
@@ -170,4 +170,5 @@ if __name__ == "__main__":
     else:
         print(loss)
 
+    # TODO in order to use the experiment uncomment and use -v flag or verbose = True.
     # experiment(verbose=args.verbose)
