@@ -3,10 +3,11 @@ from ID3 import ID3Node
 import random
 from sklearn.model_selection import train_test_split
 import argparse
+import numpy as np
 
 
 class KNNForestClassifier(AbstractClassifier):
-    def __init__(self, N, k):
+    def __init__(self, N=20, k=7):
         super().__init__()
         self.prob_range = 0.3, 0.7
         self.N = N
@@ -28,6 +29,37 @@ class KNNForestClassifier(AbstractClassifier):
             centroid = centroid.mean(axis=0)
             self.centroids.append(centroid)
 
+    def predict(self, x, y):
+        test_centroid = x.copy()
+        test_centroid = test_centroid.mean(axis=0)
+        distances = []
+        for tree, centroid in zip(self.forest, self.centroids):
+            dist = (np.linalg.norm(centroid - test_centroid))
+            value = tree, dist
+            distances.append(value)
+        distances.sort(key=lambda val: val[1])
+        distances = distances[:self.k]
+        data = x.copy()
+        data["diagnosis"] = y
+        right_predictions, false_positive, false_negative = 0, 0, 0
+        num_of_samples = len(data.index)
+        for row in range(len(data.index)):
+            predictions = []
+            for tree, _ in distances:
+                prediction = self.walk_the_tree(tree, row, data)
+                predictions.append(prediction)
+            most_common = max(set(predictions), key=predictions.count)
+            if most_common == data["diagnosis"].iloc[row]:
+                right_predictions += 1
+            else:
+                if most_common == "M":
+                    false_positive += 1
+                else:
+                    false_negative += 1
+        acc = right_predictions / num_of_samples
+        loss = (0.1 * false_positive + false_negative) / num_of_samples
+        return acc, loss
+
 
 if __name__ == "__main__":
 
@@ -39,12 +71,11 @@ if __name__ == "__main__":
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
     # creating a classifier instance
-    classifier = KNNForestClassifier(N=3, k=5)
+    classifier = KNNForestClassifier(N=20, k=7)
     # fitting the classifier
     classifier.fit(train_x, train_y)
     # predicting on the test data set
-    # accuracy, loss = classifier.predict(test_x, test_y)
-    # if args.verbose:
-    #     print(f"loss with cost optimizing={loss}")
-    # else:
-    #     print(loss)
+    accuracy, loss = classifier.predict(test_x, test_y)
+    print(accuracy)
+    if args.verbose:
+        print(f"loss is {loss}")
