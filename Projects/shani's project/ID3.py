@@ -284,11 +284,27 @@ def check_if_node_has_to_be_pruned(self):
 
 def build_id3_tree_with_pruning(data, prune_value) -> TreeNode:
     """
-    todo this function builds a tree with pruned
-    :return:
-    :rtype:
+    This function builds a tree with pruned
+    :param data: the whole data set
+    :param prune_value: prune value
+    :return: An id3 tree with pruning
+    :rtype: TreeNode
     """
-    pass
+    node = TreeNode(data)
+    diag, check_leaf = node.all_same_data()
+    if check_leaf:
+        node.diag = diag
+    else:
+        # if check_leaf = false, means that this is not a leaf. therefore we update feature for slicing and slicing val
+        node.feature, node.threshold = node.choose_feature()
+        #in this part we slice the dataframe
+        right_data = node.data[node.data[node.feature] > node.threshold]
+        left_data = node.data[node.data[node.feature] <= node.threshold]
+        # Recursive part to create to build the ID3 Tree
+        node.left = build_id3_tree(data=left_data)
+        node.right = build_id3_tree(data=right_data)
+
+    return node
 
 
 class TreeNodeWithPruneClassifier(ID3Classifier):
