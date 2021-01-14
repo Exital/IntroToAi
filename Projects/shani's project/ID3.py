@@ -183,7 +183,7 @@ class TreeNode:
         last_val = None
         if len(self.data.index) == 1:
             return True, values[0]
-        for val1,val2 in zip(values,values[1:]):
+        for val1,val2 in zip(values, values[1:]):
             if val1 != val2:
                 return None, False
             else:
@@ -409,7 +409,8 @@ if __name__ == "__main__":
     value_prediction = classifier.predict(test_x, test_y)
     print(value_prediction)
 
-    experiment(graph=True)
+    # TODO in order to use this function please uncomment it and use graph=True.
+    # experiment(graph=False)
 
     # train_x, train_y = get_data_from_csv("train.csv")
     # test_x, test_y = get_data_from_csv("test.csv")
