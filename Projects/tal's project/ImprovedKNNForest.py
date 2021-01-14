@@ -166,7 +166,7 @@ class ImprovedKNNForestClassifier(ID3Classifier):
     def fit(self, x, y):
         data = x.copy()
         data["diagnosis"] = y
-        self.id3tree = GBTTree(data, k=self.num_of_boost, lr=0.5)
+        self.id3tree = GBTTree(data, k=self.num_of_boost, lr=0.2)
         self.id3tree.boost()
 
     def predict(self, x, y):
@@ -189,7 +189,7 @@ if __name__ == "__main__":
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
-    classifier = ImprovedKNNForestClassifier(num_of_boost=2)
+    classifier = ImprovedKNNForestClassifier(num_of_boost=3)
     classifier.fit(train_x, train_y)
     acc = classifier.predict(test_x, test_y)
     print(acc)
