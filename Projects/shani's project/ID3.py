@@ -255,7 +255,10 @@ class ID3Classifier:
             res = None
             while not node.is_leaf():
                 feature_node = node.feature
-                value = data[feature_node].iloc[row]
+                try:
+                    value = data[feature_node].iloc[row]
+                except:
+                    print("shit")
                 if value <= node.threshold:
                     node = node.left
                 else:
@@ -275,7 +278,7 @@ class ID3Classifier:
         return correct_predict / len(data.index)
 
 
-def check_if_node_has_to_be_pruned(data, pruned_value):
+def check_if_node_has_to_be_pruned(data_root, data_son, pruned_value):
     """
     This function return true if the node we are checking has to be pruned
     :param data: son's data
@@ -284,9 +287,9 @@ def check_if_node_has_to_be_pruned(data, pruned_value):
     :rtype: tuple
     """
 
-    detection = data["diagnosis"]  # diagnosis
+    detection = data_root["diagnosis"]  # diagnosis
     detection_list = detection.tolist()
-    if len(data.index) < pruned_value:
+    if len(data_son.index) < pruned_value:
         count_M, count_B = 0, 0
         for i in range(len(detection)):
             if detection_list[i] == "M":
@@ -294,11 +297,11 @@ def check_if_node_has_to_be_pruned(data, pruned_value):
             else:
                 count_B += 1
 
-            if count_M > count_B:
-                diag = "M"
-                return True, diag
-            else:
-                return True, "B"
+        if count_M > count_B:
+            diag = "M"
+            return True, diag
+        else:
+            return True, "B"
     else:
         return False, None
 
@@ -318,16 +321,23 @@ def build_id3_tree_with_pruning(data, prune_value=8) -> TreeNode:
         :param prune_value: prune value
         :return:
         """
-        val = prune_value
         if tree.diag is None:
-            prune, diag = check_if_node_has_to_be_pruned(tree.data, val)
-            if prune:
-                node = TreeNode()
-                node.diag = diag
-                return node
-            else:
-                tree.left = create_pruned_tree(tree.left, prune_value)
-                tree.right = create_pruned_tree(tree.right, prune_value)
+            if tree.left is not None:
+                prune, diag = check_if_node_has_to_be_pruned(tree.data, tree.left.data, prune_value)
+                if prune:
+                    new_tree = TreeNode()
+                    new_tree.diag = diag
+                    return new_tree
+                else:
+                    tree.left = create_pruned_tree(tree.left, prune_value)
+            if tree.right is not None:
+                prune, diag = check_if_node_has_to_be_pruned(tree.data, tree.right.data, prune_value)
+                if prune:
+                    new_tree = TreeNode()
+                    new_tree.diag = diag
+                    return new_tree
+                else:
+                    tree.right = create_pruned_tree(tree.right, prune_value)
         return tree
 
     tree = build_id3_tree(data)
@@ -356,14 +366,14 @@ def graph_demostrate_influence_accuracy(x_values, y_values, x_label="", y_label=
     plt.plot(x_values, y_values)
     plt.show()
 
-def experiment(x=None, y=None, k_values=None, check=False):
+def experiment(x=None, y=None, k_values=None, graph=False):
     """
 
     """
     if x is None or y is None:
         x, y = get_data_from_csv("train.csv")
     if k_values is None:
-        k_values = [i for i in range(0, 25)]
+        k_values = [i for i in range(0, 120, 4)]
 
     accuracy_split_values = []
     num_splits = 5
@@ -375,20 +385,18 @@ def experiment(x=None, y=None, k_values=None, check=False):
 
         accuracy_k_values = []
         for k in k_values:
-            classifier = TreeNodeWithPruneClassifier(pruning_value=k)
+            classifier = TreeNodeWithPruneClassifier(prune_value=k)
             classifier.fit(x_train, y_train)
-            accuracy, loss = classifier.predict(x_test, y_test)
-            accuracy_k_values.append(acc)
+            accuracy = classifier.predict(x_test, y_test)
+            accuracy_k_values.append(accuracy)
         accuracy_split_values.append(accuracy_k_values)
-    avg = [(sum(col)) / len(col) for col in zip(*accuracy_split_values)] #change
-    if check:
+    avg = [(sum(col)) / len(col) for col in zip(*accuracy_split_values)]
+    if graph:
         graph_demostrate_influence_accuracy(k_values, avg, "value of M", "Accuracy")
         zipped = list(zip(k_values, avg))
         zipped.sort(key=lambda x: x[1], reverse=True)
         best_value_k = zipped[0]
-        print(f"Kfold cross validation results:\n"
-              f"Best M={best_value_k[0]} with accuracy={best_value_k[1]}")
-
+        print(f"Best M value is {best_value_k}")
 
 
 if __name__ == "__main__":
@@ -402,10 +410,18 @@ if __name__ == "__main__":
     value_prediction = classifier.predict(test_x, test_y)
     print(value_prediction)
 
-   # node = TreeNodeWithPrune(data)
-   # node.check_if_node_has_to_be_pruned()
+    experiment(graph=True)
 
-    classifier = TreeNodeWithPruneClassifier(prune_value=200)
-    classifier.fit(train_x, train_y)
-    acc = classifier.predict(test_x, test_y)
-    print(acc)
+    # train_x, train_y = get_data_from_csv("train.csv")
+    # test_x, test_y = get_data_from_csv("test.csv")
+    #
+    # classifier = TreeNodeWithPruneClassifier(prune_value=150)
+    # classifier.fit(train_x, train_y)
+    #
+    # value_prediction = classifier.predict(test_x, test_y)
+    # print(value_prediction)
+
+
+
+
+

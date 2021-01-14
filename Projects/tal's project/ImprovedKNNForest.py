@@ -1,22 +1,8 @@
 from utils import csv2xy, log, AbstractClassifier
-from ID3 import ID3Node
+from ID3 import ID3Node, ID3Classifier
 import argparse
 import numpy as np
 DEFAULT_CLASSIFICATION = 0.5
-
-# def build_gradient_boosting_tree(x, y):
-#     labels = y.copy()
-#     labels = labels.replace(['M'], 1)
-#     labels = labels.replace(['B'], 0)
-#     data = x.copy()
-#     data["diagnosis"] = labels
-#     count = data["diagnosis"].value_counts()
-#     m_count = count["M"] if "M" in count.index else 0
-#     b_count = count["B"] if "B" in count.index else 0
-#     fraction = m_count / b_count if m_count > b_count else b_count / m_count
-#     log_of_odds0 = log(fraction)
-#     probability0 = np.exp(log_of_odds0) / (np.exp(log_of_odds0) + 1)
-#     prediction0 = 1 if probability0 >= 0.5 else 0
 
 
 class GBTNode(ID3Node):
@@ -172,6 +158,13 @@ class GBTTree:
         for i in range(self.k):
             self.add_another_layer()
 
+class ImprovedKNNForestClassifier(ID3Classifier):
+    def __init__(self):
+        self.id3tree = None
+
+    def fit(self, x, y):
+        pass
+
 
 if __name__ == "__main__":
 
@@ -183,6 +176,7 @@ if __name__ == "__main__":
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
     train_x["diagnosis"] = train_y
-    tree = GBTTree(train_x)
+    tree = GBTTree(train_x, k=2)
     tree.boost()
+    print(5)
 
