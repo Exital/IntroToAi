@@ -3,7 +3,7 @@ import pandas as pd
 from sklearn.model_selection import KFold
 import matplotlib.pyplot as plt
 DEFAULT_DIAGNOSIS = "M"
-PRUNE_VALUE = 8
+
 
 
 def log(x):
@@ -30,7 +30,7 @@ class TreeNode:
     """
     This nodes will make an ID3 tree.
     """
-    def __init__(self, data: pd.DataFrame):
+    def __init__(self, data=None):
         """
         function to generate the whole id3tree
         :param data: pandas data frame with the diagnosis column
@@ -275,7 +275,7 @@ class ID3Classifier:
         return correct_predict / len(data.index)
 
 
-def check_if_node_has_to_be_pruned(self, data):
+def check_if_node_has_to_be_pruned(data, pruned_value):
     """
     This function return true if the node we are checking has to be pruned
     :param data: son's data
@@ -283,23 +283,27 @@ def check_if_node_has_to_be_pruned(self, data):
     :return: if it has to be pruned return value is (True, diag), else (False, None)
     :rtype: tuple
     """
-    detection = self.data["diagnosis"]  # diagnosis
+
+    detection = data["diagnosis"]  # diagnosis
     detection_list = detection.tolist()
-    count_M, count_E = 0, 0
-    for i in range(len(detection)):
-        if detection_list[i] == "M":
-            count_M += 1
-        else:
-            count_E += 1
-    # if len(data.index) < self.
-    if count_M > count_E:
-        diag = count_E
-        return True, diag
+    if len(data.index) < pruned_value:
+        count_M, count_B = 0, 0
+        for i in range(len(detection)):
+            if detection_list[i] == "M":
+                count_M += 1
+            else:
+                count_B += 1
+
+            if count_M > count_B:
+                diag = "M"
+                return True, diag
+            else:
+                return True, "B"
     else:
         return False, None
 
 
-def build_id3_tree_with_pruning(data, diag, prune_value) -> TreeNode:
+def build_id3_tree_with_pruning(data, prune_value=8) -> TreeNode:
     """
     This function builds a tree with pruned
     :param data: the whole data set
@@ -308,46 +312,42 @@ def build_id3_tree_with_pruning(data, diag, prune_value) -> TreeNode:
     :rtype: TreeNode
     """
 
-    node = TreeNode(data)
-    # check if that is a pruned son
-    if node.diag is None:
-        # first, we check if that is a leaf
-        diag, check_leaf = node.all_same_data()
-        if check_leaf:
-            node.diag = diag
-        else:
-            # if check_leaf = false, means that this is not a leaf. therefore
-            # we update feature for slicing and slicing val
-            node.feature, node.threshold = node.choose_feature()
-            # in this part we slice the dataframe
-            right_data = node.data[node.data[node.feature] > node.threshold]
-            left_data = node.data[node.data[node.feature] <= node.threshold]
-            # Recursive part to create to build the ID3 Tree, checking if the sons need to be pruned
-            prune_value_s = PRUNE_VALUE # to checlk this location and if need after line 315
-            prune, diag = check_if_node_has_to_be_pruned(left_data)
+    def create_pruned_tree(tree, prune_value):
+        """
+        :param tree: tree value
+        :param prune_value: prune value
+        :return:
+        """
+        val = prune_value
+        if tree.diag is None:
+            prune, diag = check_if_node_has_to_be_pruned(tree.data, val)
             if prune:
-                node.left = build_id3_tree_with_pruning(diag=diag, prune_value=prune_value_s)
+                node = TreeNode()
+                node.diag = diag
+                return node
             else:
-                node.left = build_id3_tree_with_pruning(data=left_data, prune_value=prune_value_s)
-            prune, diag = check_if_node_has_to_be_pruned(right_data)
-            if prune:
-                node.right = build_id3_tree_with_pruning(diag=diag, prune_value=prune_value_s)
-            else:
-                node.right = build_id3_tree_with_pruning(data=right_data, prune_value=prune_value_s)
-    return node
+                tree.left = create_pruned_tree(tree.left, prune_value)
+                tree.right = create_pruned_tree(tree.right, prune_value)
+        return tree
+
+    tree = build_id3_tree(data)
+    return create_pruned_tree(tree, prune_value)
+
+
 
 
 class TreeNodeWithPruneClassifier(ID3Classifier):
     """
     todo this classifier is for prunning prediction
     """
-    def __init__(self, prune_value = PRUNE_VALUE):
-        super(TreeNodeWithPruneClassifier, self).__init__()
+    def __init__(self, prune_value=8):
+        super().__init__()
+        self.m = prune_value
 
     def fit(self, x, y):
         data = x.copy()
         data["diagnosis"] = y
-        self.ID3TreeNode = build_id3_tree_with_pruning(data, prune_value=PRUNE_VALUE)
+        self.ID3TreeNode = build_id3_tree_with_pruning(data, self.m)
 
 
 def graph_demostrate_influence_accuracy(x_values, y_values, x_label="", y_label=""):
@@ -358,17 +358,7 @@ def graph_demostrate_influence_accuracy(x_values, y_values, x_label="", y_label=
 
 def experiment(x=None, y=None, k_values=None, check=False):
     """
-    This function uses sklearn's kFold to cross validate and find the best
-    M value for the pruning.
-    The only parameter you need is to set verbose to True so you can see output.
-    :param X: X dataset
-    :type X: dataframe
-    :param y: y dataset
-    :type y: dataframe
-    :param k_values: values to cross validate
-    :type k_values: list
-    :param verbose: True if you want to see graph and summary
-    :type verbose: bool
+
     """
     if x is None or y is None:
         x, y = get_data_from_csv("train.csv")
@@ -415,7 +405,7 @@ if __name__ == "__main__":
    # node = TreeNodeWithPrune(data)
    # node.check_if_node_has_to_be_pruned()
 
-    classifier = TreeNodeWithPruneClassifier()
+    classifier = TreeNodeWithPruneClassifier(prune_value=200)
     classifier.fit(train_x, train_y)
     acc = classifier.predict(test_x, test_y)
     print(acc)
