@@ -1,184 +1,66 @@
 from utils import csv2xy, log, AbstractClassifier
 from ID3 import ID3Node, ID3Classifier
 import argparse
+import pandas as pd
+from KNNForest import KNNForestClassifier
+from sklearn.model_selection import KFold
+from sklearn.model_selection import train_test_split
+import random
 import numpy as np
-DEFAULT_CLASSIFICATION = 0.5
 
 
-class GBTNode(ID3Node):
-    def __init__(self, data):
-        self.feature = None
-        self.slicing_val = None
-        self.left = None
-        self.right = None
-        self.diag = None
-        self.data = data
+class ImprovedKNNForestClassifier:
+    def __init__(self, N=20, k=7):
+        self.knn_classifier = KNNForestClassifier(N=N, k=k)
+        self.scaling_consts = []
 
-        # check if that is a leaf
-        leaf, diag = self._all_data_has_same_diag()
-        if leaf:
-            self.diag = diag
-        else:
-            # this is not a leaf so we update feature for slicing and slicing val
-            self.feature, _, self.slicing_val = self._choose_feature()
-            # slicing the dataframe
-            data_left = self.data[self.data[self.feature] <= self.slicing_val]
-            data_right = self.data[self.data[self.feature] > self.slicing_val]
-            # recursively creating more ID3Nodes
-            self.left = GBTNode(data=data_left)
-            self.right = GBTNode(data=data_right)
+    def scalar(self, series, mean, deviation):
+        for index, value in series.items():
+            series.loc[index] = (value - mean) / deviation
+        return series
 
-    def _IG_for_feature(self, feature):
-        """
-        This function will check what is the best separator value.
-        :return: (Best IG for this feature, separator value)
-        :rtype: tuple
-        """
-        values = self.data[feature]
-        diagnosis = self.data["diagnosis"]
-        values_list = values.tolist()
-        # creating the separator's list
-        sorted_values = sorted(values_list, key=lambda x: x)
-        separators_list = [(x + y) / 2 for x, y in zip(sorted_values, sorted_values[1:])]
-        best_ig = (float("-inf"), None)
+    def fit_scaling(self, x):
+        self.scaling_consts = []
+        features = x.keys().tolist()
+        x_scaled = x.copy()
+        for feature in features:
+            mean_val, std_val = x_scaled[feature].mean(), x_scaled[feature].std()
+            scaling_const = feature, mean_val, std_val
+            self.scaling_consts.append(scaling_const)
+            x_scaled[feature] = self.scalar(x_scaled[feature], mean_val, std_val)
+        return x_scaled
 
-        for separator in separators_list:
-            size_smaller, smaller_positive, size_larger, larger_positive = 0, 0, 0, 0
-            for val, diag in zip(values, diagnosis):
-                if val <= separator:
-                    size_smaller += 1
-                    if diag >= 0.5:
-                        smaller_positive += 1
-                else:
-                    size_larger += 1
-                    if diag >= 0.5:
-                        larger_positive += 1
-
-            # calculate the root's IG
-            fraction = (larger_positive+smaller_positive) / len(values)
-            entropy_root = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
-            # calculate the left son's IG
-            fraction = smaller_positive / size_smaller if size_smaller != 0 else (larger_positive+smaller_positive) / len(values)
-            entropy_left = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
-            # calculate the right son's IG
-            fraction = larger_positive / size_larger if size_larger != 0 else (larger_positive+smaller_positive) / len(values)
-            entropy_right = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
-
-            ig = entropy_root - entropy_left * size_smaller / len(values) - entropy_right*size_larger / len(values)
-            if ig >= best_ig[0]:
-                best_ig = ig, separator
-
-        if best_ig[1] is None:
-            raise ValueError("separator not found!")
-        return best_ig
-
-    def _all_data_has_same_diag(self):
-        """
-        That function checks whether a node has reached a place where all of his data is either "M" or "B".
-        :return: (True, diagnosis) or (False, None)
-        :rtype: tuple
-        """
-        if len(self.data.index) == 0:
-            return True, DEFAULT_CLASSIFICATION
-        if len(self.data.diagnosis.unique()) == 1:
-            result = (True, self.data["diagnosis"].iloc[0])
-        else:
-            result = (False, None)
-        return result
-
-
-class GBTTree:
-    def __init__(self, train_data, k=10, lr=0.1):
-        self.k = k
-        self.lr = lr
-        self.forest = []
-        self.data = None
-        self.ground_truth = None
-        data_copy = train_data.copy()
-        labels = data_copy["diagnosis"]
-        labels = labels.replace(['M'], 1)
-        labels = labels.replace(['B'], 0)
-        data_copy["diagnosis"] = labels
-
-        self.ground_truth = labels.copy()
-        self.data = data_copy
-        self.avg = data_copy["diagnosis"].mean()
-
-        # build first tree
-        tree_data = self.data.copy()
-        new_diagnosis = self.ground_truth - self.avg
-        tree_data["diagnosis"] = new_diagnosis
-        tree = GBTNode(tree_data)
-        self.forest.append(tree)
-
-    def walk_the_tree(self, node, row, data):
-        """
-        This function is a recursive function that walks the tree till it reaches a leaf.
-        :param node: A node that has diag, slicing_val members and is_leaf method.
-        :type node: ID3Node
-        :param row: row number on the dataframe
-        :type row: int
-        :param data: the dataset
-        :type data: dataframe
-        :return: diagnosis
-        """
-        if node.is_leaf():
-            return node.diag
-        else:
-            feature = node.feature
-            value = data[feature].iloc[row]
-            if value <= node.slicing_val:
-                return self.walk_the_tree(node.left, row, data)
-            else:
-                return self.walk_the_tree(node.right, row, data)
-
-    def calc_prediction_for_row(self, row, data):
-        result = self.avg
-        for tree in self.forest:
-            raw_prediction = self.walk_the_tree(tree, row, data)
-            result += self.lr * raw_prediction
-        return result
-
-    def calc_residual(self, data):
-        residuals = self.ground_truth.copy()
-        for row in range(len(data.index)):
-            prediction = self.calc_prediction_for_row(row, data)
-            residual = self.ground_truth.iloc[row] - prediction
-            residuals.iloc[row] = residual
-        return residuals
-
-    def add_another_layer(self):
-        residual = self.calc_residual(self.data)
-        new_data = self.data.copy()
-        new_data["diagnosis"] = residual
-        new_tree = GBTNode(data=new_data)
-        self.forest.append(new_tree)
-
-    def boost(self):
-        for i in range(self.k):
-            self.add_another_layer()
-
-class ImprovedKNNForestClassifier(ID3Classifier):
-    def __init__(self, num_of_boost):
-        self.id3tree = None
-        self.num_of_boost = num_of_boost
+    def predict_scaling(self, x):
+        x_scaled = x.copy()
+        for feature, mean_val, std_val in self.scaling_consts:
+            x_scaled[feature] = self.scalar(x_scaled[feature], mean_val, std_val)
+        return x_scaled
 
     def fit(self, x, y):
-        data = x.copy()
-        data["diagnosis"] = y
-        self.id3tree = GBTTree(data, k=self.num_of_boost, lr=0.2)
-        self.id3tree.boost()
+        scaled_x = self.fit_scaling(x)
+        self.knn_classifier.fit(scaled_x, y)
 
     def predict(self, x, y):
-        data = x.copy()
-        data["diagnosis"] = y
-        counter = 0
-        for row in data.index:
-            prediction = "M" if self.id3tree.calc_prediction_for_row(row, data) >= 0.5 else "B"
-            if prediction == data["diagnosis"].iloc[row]:
-                counter += 1
-        return counter / len(data.index)
+        scaled_x = self.predict_scaling(x)
+        return self.knn_classifier.predict(scaled_x, y)
 
+
+def experiment(train_x, train_y, test_x, test_y, splits=5, N=20, k=7, verbose=False):
+        accuracy = []
+        improved_accuracy = []
+        classifier = KNNForestClassifier(N=N, k=k)
+        improved_classifier = ImprovedKNNForestClassifier(N=N, k=k)
+
+        for i in range(splits):
+            classifier.fit(train_x, train_y)
+            acc, loss = classifier.predict(test_x, test_y)
+            accuracy.append(acc)
+            improved_classifier.fit(train_x, train_y)
+            acc, loss = improved_classifier.predict(test_x, test_y)
+            improved_accuracy.append(acc)
+        if args.verbose:
+            print(f"accuracy is {accuracy} with average of {sum(accuracy)/len(accuracy)}")
+            print(f"improved accuracy is {improved_accuracy} with average of {sum(improved_accuracy)/len(improved_accuracy)}")
 
 if __name__ == "__main__":
 
@@ -189,7 +71,9 @@ if __name__ == "__main__":
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
-    classifier = ImprovedKNNForestClassifier(num_of_boost=3)
-    classifier.fit(train_x, train_y)
-    acc = classifier.predict(test_x, test_y)
-    print(acc)
+    # classifier = ImprovedKNNForestClassifier(N=20, k=7)
+    # classifier.fit(train_x, train_y)
+    # acc, loss = classifier.predict(test_x, test_y)
+    # print(acc)
+
+    experiment(train_x, train_y, test_x, test_y, verbose=args.verbose, N=20, k=7, splits=50)
