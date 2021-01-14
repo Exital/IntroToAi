@@ -181,6 +181,8 @@ class TreeNode:
             return True, DEFAULT_DIAGNOSIS
         values = self.data["diagnosis"].tolist()
         last_val = None
+        if len(self.data.index) == 1:
+            return True, values[0]
         for val1,val2 in zip(values,values[1:]):
             if val1 != val2:
                 return None, False
@@ -255,10 +257,7 @@ class ID3Classifier:
             res = None
             while not node.is_leaf():
                 feature_node = node.feature
-                try:
-                    value = data[feature_node].iloc[row]
-                except:
-                    print("shit")
+                value = data[feature_node].iloc[row]
                 if value <= node.threshold:
                     node = node.left
                 else:
@@ -373,7 +372,7 @@ def experiment(x=None, y=None, k_values=None, graph=False):
     if x is None or y is None:
         x, y = get_data_from_csv("train.csv")
     if k_values is None:
-        k_values = [i for i in range(0, 120, 4)]
+        k_values = [i for i in range(0, 40, 4)]
 
     accuracy_split_values = []
     num_splits = 5
