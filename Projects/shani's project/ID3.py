@@ -1,6 +1,9 @@
 from numpy import log2
 import pandas as pd
+from sklearn.model_selection import KFold
+import matplotlib.pyplot as plt
 DEFAULT_DIAGNOSIS = "M"
+PRUNE_VALUE = 8
 
 
 def log(x):
@@ -148,8 +151,6 @@ class TreeNode:
         return list_res
 
 
-
-
     def choose_feature(self):
         """
         checks the IG of all features and chooses the best one.
@@ -196,6 +197,7 @@ def build_id3_tree(data: pd.DataFrame) -> TreeNode:
     :return: An ID3 tree
     :rtype: TreeNode
     """
+    # check if that is a leaf
     node = TreeNode(data)
     diag, check_leaf = node.all_same_data()
     if check_leaf:
@@ -273,16 +275,31 @@ class ID3Classifier:
         return correct_predict / len(data.index)
 
 
-def check_if_node_has_to_be_pruned(self):
+def check_if_node_has_to_be_pruned(self, data):
     """
-    todo this function return true if the node we are checking has to be pruned
-    :return:
-    :rtype:
+    This function return true if the node we are checking has to be pruned
+    :param data: son's data
+    :type data: dataframe
+    :return: if it has to be pruned return value is (True, diag), else (False, None)
+    :rtype: tuple
     """
-    pass
+    detection = self.data["diagnosis"]  # diagnosis
+    detection_list = detection.tolist()
+    count_M, count_E = 0, 0
+    for i in range(len(detection)):
+        if detection_list[i] == "M":
+            count_M += 1
+        else:
+            count_E += 1
+    # if len(data.index) < self.
+    if count_M > count_E:
+        diag = count_E
+        return True, diag
+    else:
+        return False, None
 
 
-def build_id3_tree_with_pruning(data, prune_value) -> TreeNode:
+def build_id3_tree_with_pruning(data, diag, prune_value) -> TreeNode:
     """
     This function builds a tree with pruned
     :param data: the whole data set
@@ -290,20 +307,33 @@ def build_id3_tree_with_pruning(data, prune_value) -> TreeNode:
     :return: An id3 tree with pruning
     :rtype: TreeNode
     """
-    node = TreeNode(data)
-    diag, check_leaf = node.all_same_data()
-    if check_leaf:
-        node.diag = diag
-    else:
-        # if check_leaf = false, means that this is not a leaf. therefore we update feature for slicing and slicing val
-        node.feature, node.threshold = node.choose_feature()
-        #in this part we slice the dataframe
-        right_data = node.data[node.data[node.feature] > node.threshold]
-        left_data = node.data[node.data[node.feature] <= node.threshold]
-        # Recursive part to create to build the ID3 Tree
-        node.left = build_id3_tree(data=left_data)
-        node.right = build_id3_tree(data=right_data)
 
+    node = TreeNode(data)
+    # check if that is a pruned son
+    if node.diag is None:
+        # first, we check if that is a leaf
+        diag, check_leaf = node.all_same_data()
+        if check_leaf:
+            node.diag = diag
+        else:
+            # if check_leaf = false, means that this is not a leaf. therefore
+            # we update feature for slicing and slicing val
+            node.feature, node.threshold = node.choose_feature()
+            # in this part we slice the dataframe
+            right_data = node.data[node.data[node.feature] > node.threshold]
+            left_data = node.data[node.data[node.feature] <= node.threshold]
+            # Recursive part to create to build the ID3 Tree, checking if the sons need to be pruned
+            prune_value_s = PRUNE_VALUE # to checlk this location and if need after line 315
+            prune, diag = check_if_node_has_to_be_pruned(left_data)
+            if prune:
+                node.left = build_id3_tree_with_pruning(diag=diag, prune_value=prune_value_s)
+            else:
+                node.left = build_id3_tree_with_pruning(data=left_data, prune_value=prune_value_s)
+            prune, diag = check_if_node_has_to_be_pruned(right_data)
+            if prune:
+                node.right = build_id3_tree_with_pruning(diag=diag, prune_value=prune_value_s)
+            else:
+                node.right = build_id3_tree_with_pruning(data=right_data, prune_value=prune_value_s)
     return node
 
 
@@ -311,13 +341,63 @@ class TreeNodeWithPruneClassifier(ID3Classifier):
     """
     todo this classifier is for prunning prediction
     """
-    def __init__(self):
-        pass
+    def __init__(self, prune_value = PRUNE_VALUE):
+        super(TreeNodeWithPruneClassifier, self).__init__()
 
     def fit(self, x, y):
-        pass
+        data = x.copy()
+        data["diagnosis"] = y
+        self.ID3TreeNode = build_id3_tree_with_pruning(data, prune_value=PRUNE_VALUE)
 
 
+def graph_demostrate_influence_accuracy(x_values, y_values, x_label="", y_label=""):
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.plot(x_values, y_values)
+    plt.show()
+
+def experiment(x=None, y=None, k_values=None, check=False):
+    """
+    This function uses sklearn's kFold to cross validate and find the best
+    M value for the pruning.
+    The only parameter you need is to set verbose to True so you can see output.
+    :param X: X dataset
+    :type X: dataframe
+    :param y: y dataset
+    :type y: dataframe
+    :param k_values: values to cross validate
+    :type k_values: list
+    :param verbose: True if you want to see graph and summary
+    :type verbose: bool
+    """
+    if x is None or y is None:
+        x, y = get_data_from_csv("train.csv")
+    if k_values is None:
+        k_values = [i for i in range(0, 25)]
+
+    accuracy_split_values = []
+    num_splits = 5
+
+    kf = KFold(n_splits=num_splits, random_state=204512396, shuffle=True)
+    for train_index, test_index in kf.split(x):
+        x_train, x_test = x.iloc[train_index], x.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+        accuracy_k_values = []
+        for k in k_values:
+            classifier = TreeNodeWithPruneClassifier(pruning_value=k)
+            classifier.fit(x_train, y_train)
+            accuracy, loss = classifier.predict(x_test, y_test)
+            accuracy_k_values.append(acc)
+        accuracy_split_values.append(accuracy_k_values)
+    avg = [(sum(col)) / len(col) for col in zip(*accuracy_split_values)] #change
+    if check:
+        graph_demostrate_influence_accuracy(k_values, avg, "value of M", "Accuracy")
+        zipped = list(zip(k_values, avg))
+        zipped.sort(key=lambda x: x[1], reverse=True)
+        best_value_k = zipped[0]
+        print(f"Kfold cross validation results:\n"
+              f"Best M={best_value_k[0]} with accuracy={best_value_k[1]}")
 
 
 
@@ -332,8 +412,8 @@ if __name__ == "__main__":
     value_prediction = classifier.predict(test_x, test_y)
     print(value_prediction)
 
-    node = TreeNodeWithPrune(data)
-    node.check_if_node_has_to_be_pruned()
+   # node = TreeNodeWithPrune(data)
+   # node.check_if_node_has_to_be_pruned()
 
     classifier = TreeNodeWithPruneClassifier()
     classifier.fit(train_x, train_y)
