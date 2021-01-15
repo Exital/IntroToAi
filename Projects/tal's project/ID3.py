@@ -265,6 +265,26 @@ def experiment(X=None, y=None, k_values=None, verbose=False):
               f"Best M={best_k[0]} with accuracy={best_k[1]}")
 
 
+def find_features_to_remove(X_train, y_train, X_test, y_test):
+    classifier = ID3Classifier()
+    classifier.fit(X_train, y_train)
+    original_acc, _ = classifier.predict(X_test, y_test)
+    to_remove = []
+    features = X_train.keys().tolist()
+    for feature in features:
+        sub_train = X_train.copy()
+        sub_train = sub_train.drop([feature], axis=1)
+        sub_test = X_test.copy()
+        sub_test = sub_test.drop([feature], axis=1)
+        classifier.fit(sub_train, y_train)
+        curr_acc, _ = classifier.predict(sub_test, y_test)
+        if curr_acc > original_acc:
+            value = feature, curr_acc - original_acc
+            to_remove.append(value)
+    if args.verbose:
+        print(to_remove)
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -274,6 +294,9 @@ if __name__ == "__main__":
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
+    # best features to remove
+    # train_x = train_x.drop(['concavity_mean', 'concavity_se', 'texture_worst'], axis=1)
+    # test_x = test_x.drop(['concavity_mean', 'concavity_se', 'texture_worst'], axis=1)
     # creating a classifier instance
     classifier = ID3Classifier()
     # fitting the classifier
@@ -285,4 +308,7 @@ if __name__ == "__main__":
         print(f"loss without cost optimizing={loss}")
 
     # TODO un-comment this experiment function and choose verbose = True (or run with -v flag) to see results.
-    # experiment(verbose=args.verbose)
+    # kfold_x, kfold_y = csv2xy("kfold.csv")
+    # experiment(verbose=args.verbose, X=kfold_x, y=kfold_y)
+
+    find_features_to_remove(train_x, train_y, test_x, test_y)
