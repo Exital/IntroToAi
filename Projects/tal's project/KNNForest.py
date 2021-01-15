@@ -16,6 +16,9 @@ class KNNForestClassifier(AbstractClassifier):
         self.centroids = []
 
     def fit(self, x, y):
+        # clear those lists every time we fit!
+        self.forest = []
+        self.centroids = []
         n = len(x.index)
         for i in range(self.N):
             start, stop = self.prob_range

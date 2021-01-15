@@ -2,6 +2,8 @@ from utils import csv2xy
 import argparse
 import matplotlib.pyplot as plt
 from KNNForest import KNNForestClassifier
+from ID3 import find_best_features_to_remove
+from sklearn.model_selection import train_test_split, KFold
 
 
 def remove_bad_features(x, features: list):
@@ -35,12 +37,10 @@ class ImprovedKNNForestClassifier:
     def __init__(self, N=20, k=7):
         self.knn_classifier = KNNForestClassifier(N=N, k=k)
         self.scaling_consts = []
-        # those bad features were Interrogated with my feature selection function on ID3.py
-        self.bad_features = ["texture_worst", "concavity_mean"]
-        # self.bad_features = ["texture_worst", "concavity_mean", "concave points_worst"]
-        # self.bad_features = ["texture_worst", "concavity_mean", "concave points_worst", "area_worst"]
+        self.test_size = 0.33
+        self.bad_features = []
 
-    def fit_scaling(self, x):
+    def fit_scaling(self, x, y):
         """
         The scaling that has to be done with fitting + saves the values for the prediction fitting.
         :param x: the data
@@ -48,6 +48,10 @@ class ImprovedKNNForestClassifier:
         :return: a normalized dataframe
         :rtype: dataframe
         """
+        # find features to remove
+        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=self.test_size)
+        self.bad_features = []
+        self.bad_features = find_best_features_to_remove(X_train, y_train, X_test, y_test)
         # removing selected features
         subset_data = remove_bad_features(x, self.bad_features)
         # clearing the scaling consts if there is another fit for newer data
@@ -88,7 +92,7 @@ class ImprovedKNNForestClassifier:
         :param y: the labels of that data
         :type y: dataframe
         """
-        scaled_x = self.fit_scaling(x)
+        scaled_x = self.fit_scaling(x, y)
         self.knn_classifier.fit(scaled_x, y)
 
     def predict(self, x, y):
@@ -105,22 +109,34 @@ class ImprovedKNNForestClassifier:
         return self.knn_classifier.predict(scaled_x, y)
 
 
-def experiment(train_x, train_y, test_x, test_y, iterations=5, N=20, k=7, verbose=False):
+def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
     accuracy = []
     improved_accuracy = []
     classifier = KNNForestClassifier(N=N, k=k)
     improved_classifier = ImprovedKNNForestClassifier(N=N, k=k)
 
-    for i in range(iterations):
-        classifier.fit(train_x, train_y)
-        acc, loss = classifier.predict(test_x, test_y)
+    kf = KFold(n_splits=iterations, random_state=307965806, shuffle=True)
+    for train_index, test_index in kf.split(X):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+        classifier.fit(X_train, y_train)
+        acc, loss = classifier.predict(X_test, y_test)
         accuracy.append(acc)
-        improved_classifier.fit(train_x, train_y)
-        acc, loss = improved_classifier.predict(test_x, test_y)
+        improved_classifier.fit(X_train, y_train)
+        acc, loss = improved_classifier.predict(X_test, y_test)
         improved_accuracy.append(acc)
-    if args.verbose:
+
+    # for i in range(iterations):
+    #     classifier.fit(train_x, train_y)
+    #     acc, loss = classifier.predict(test_x, test_y)
+    #     accuracy.append(acc)
+    #     improved_classifier.fit(train_x, train_y)
+    #     acc, loss = improved_classifier.predict(test_x, test_y)
+    #     improved_accuracy.append(acc)
+    if verbose:
         iterations = [i for i in range(iterations)]
-        plt.xlabel("Number of iteration")
+        plt.xlabel("Folds")
         plt.ylabel("Accuracy of that iteration")
         plt.plot(iterations, accuracy, label="KNNForest")
         plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
@@ -139,5 +155,4 @@ if __name__ == "__main__":
 
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
-    test_x, test_y = csv2xy("test.csv")
-    experiment(train_x, train_y, test_x, test_y, verbose=args.verbose, N=20, k=7, iterations=15)
+    experiment(train_x, train_y, verbose=args.verbose, N=20, k=7, iterations=5)

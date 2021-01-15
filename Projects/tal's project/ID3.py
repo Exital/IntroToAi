@@ -265,36 +265,37 @@ def experiment(X=None, y=None, k_values=None, verbose=False):
               f"Best M={best_k[0]} with accuracy={best_k[1]}")
 
 
-def feature_selection(X, y, splits=5):
-    def find_best_features_to_remove(X_train, y_train, X_test, y_test):
-        classifier = ID3Classifier()
-        classifier.fit(X_train, y_train)
-        original_acc, _ = classifier.predict(X_test, y_test)
-        features = X_train.keys().tolist()
-        best_remove = None, original_acc
-        for feature in features:
-            sub_train = X_train.copy()
-            sub_train = sub_train.drop([feature], axis=1)
-            sub_test = X_test.copy()
-            sub_test = sub_test.drop([feature], axis=1)
-            # fit the classifier without the feature
-            classifier.fit(sub_train, y_train)
-            # test without the feature
-            curr_acc, _ = classifier.predict(sub_test, y_test)
-            if curr_acc > best_remove[1]:
-                best_remove = feature, curr_acc
-        if best_remove[0] is None:
-            return []
-        else:
-            sub_train = X_train.copy()
-            sub_train = sub_train.drop([best_remove[0]], axis=1)
-            sub_test = X_test.copy()
-            sub_test = sub_test.drop([best_remove[0]], axis=1)
-            more_features = find_best_features_to_remove(sub_train, y_train, sub_test, y_test)
-            result = [best_remove[0]]
-            result.extend(more_features)
-            return result
+def find_best_features_to_remove(X_train, y_train, X_test, y_test):
+    classifier = ID3Classifier()
+    classifier.fit(X_train, y_train)
+    original_acc, _ = classifier.predict(X_test, y_test)
+    features = X_train.keys().tolist()
+    best_remove = None, original_acc
+    for feature in features:
+        sub_train = X_train.copy()
+        sub_train = sub_train.drop([feature], axis=1)
+        sub_test = X_test.copy()
+        sub_test = sub_test.drop([feature], axis=1)
+        # fit the classifier without the feature
+        classifier.fit(sub_train, y_train)
+        # test without the feature
+        curr_acc, _ = classifier.predict(sub_test, y_test)
+        if curr_acc > best_remove[1]:
+            best_remove = feature, curr_acc
+    if best_remove[0] is None:
+        return []
+    else:
+        sub_train = X_train.copy()
+        sub_train = sub_train.drop([best_remove[0]], axis=1)
+        sub_test = X_test.copy()
+        sub_test = sub_test.drop([best_remove[0]], axis=1)
+        more_features = find_best_features_to_remove(sub_train, y_train, sub_test, y_test)
+        result = [best_remove[0]]
+        result.extend(more_features)
+        return result
 
+
+def feature_selection(X, y, splits=5):
     if X is None or y is None:
         X, y = csv2xy("train.csv")
     kf = KFold(n_splits=splits, shuffle=True)
