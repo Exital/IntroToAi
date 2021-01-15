@@ -4,6 +4,30 @@ import matplotlib.pyplot as plt
 from KNNForest import KNNForestClassifier
 
 
+def remove_bad_features(x, features: list):
+    sub_data = x.copy()
+    for feature in features:
+        sub_data = sub_data.drop(feature, axis=1)
+    return sub_data
+
+
+def scalar(series, mean, deviation):
+    """
+    This functions scales a series of that to normalized form as we learnt in class.
+    :param series: a pd series
+    :type series: series
+    :param mean: the mean of the series
+    :type mean: float
+    :param deviation: the std of the series
+    :type deviation: float
+    :return: a normalized series
+    :rtype: a pd series
+    """
+    for index, value in series.items():
+        series.loc[index] = (value - mean) / deviation
+    return series
+
+
 class ImprovedKNNForestClassifier:
     """
     This is a classifier that uses the regular KNNForestClassifier but normalizes the data before it uses it.
@@ -11,22 +35,10 @@ class ImprovedKNNForestClassifier:
     def __init__(self, N=20, k=7):
         self.knn_classifier = KNNForestClassifier(N=N, k=k)
         self.scaling_consts = []
-
-    def scalar(self, series, mean, deviation):
-        """
-        This functions scales a series of that to normalized form as we learnt in class.
-        :param series: a pd series
-        :type series: series
-        :param mean: the mean of the series
-        :type mean: float
-        :param deviation: the std of the series
-        :type deviation: float
-        :return: a normalized series
-        :rtype: a pd series
-        """
-        for index, value in series.items():
-            series.loc[index] = (value - mean) / deviation
-        return series
+        # those bad features were Interrogated with my feature selection function on ID3.py
+        self.bad_features = ["texture_worst", "concavity_mean"]
+        # self.bad_features = ["texture_worst", "concavity_mean", "concave points_worst"]
+        # self.bad_features = ["texture_worst", "concavity_mean", "concave points_worst", "area_worst"]
 
     def fit_scaling(self, x):
         """
@@ -36,16 +48,19 @@ class ImprovedKNNForestClassifier:
         :return: a normalized dataframe
         :rtype: dataframe
         """
+        # removing selected features
+        subset_data = remove_bad_features(x, self.bad_features)
         # clearing the scaling consts if there is another fit for newer data
         self.scaling_consts = []
-        features = x.keys().tolist()
-        x_scaled = x.copy()
+        # scaling with std scaling
+        features = subset_data.keys().tolist()
+        x_scaled = subset_data.copy()
         for feature in features:
             mean_val, std_val = x_scaled[feature].mean(), x_scaled[feature].std()
             scaling_const = feature, mean_val, std_val
             # saving the values in order to normalize predict data
             self.scaling_consts.append(scaling_const)
-            x_scaled[feature] = self.scalar(x_scaled[feature], mean_val, std_val)
+            x_scaled[feature] = scalar(x_scaled[feature], mean_val, std_val)
         return x_scaled
 
     def predict_scaling(self, x):
@@ -57,9 +72,12 @@ class ImprovedKNNForestClassifier:
         :return: a normalized dataframe
         :rtype: dataframe
         """
-        x_scaled = x.copy()
+        # removing selected features
+        subset_data = remove_bad_features(x, self.bad_features)
+        # scaling with std scaling
+        x_scaled = subset_data.copy()
         for feature, mean_val, std_val in self.scaling_consts:
-            x_scaled[feature] = self.scalar(x_scaled[feature], mean_val, std_val)
+            x_scaled[feature] = scalar(x_scaled[feature], mean_val, std_val)
         return x_scaled
 
     def fit(self, x, y):
@@ -122,4 +140,4 @@ if __name__ == "__main__":
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
-    experiment(train_x, train_y, test_x, test_y, verbose=args.verbose, N=20, k=7, iterations=20)
+    experiment(train_x, train_y, test_x, test_y, verbose=args.verbose, N=20, k=7, iterations=15)

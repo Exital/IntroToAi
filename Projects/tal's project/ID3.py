@@ -69,13 +69,13 @@ class ID3Node:
                         larger_positive += 1
 
             # calculate the root's IG
-            fraction = (larger_positive+smaller_positive) / len(values)
-            entropy_root = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
+            roots_fraction = (larger_positive+smaller_positive) / len(values)
+            entropy_root = -roots_fraction * log(roots_fraction) - ((1 - roots_fraction) * log(1 - roots_fraction))
             # calculate the left son's IG
-            fraction = smaller_positive / size_smaller if size_smaller != 0 else (larger_positive+smaller_positive) / len(values)
+            fraction = smaller_positive / size_smaller if size_smaller != 0 else roots_fraction
             entropy_left = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
             # calculate the right son's IG
-            fraction = larger_positive / size_larger if size_larger != 0 else (larger_positive+smaller_positive) / len(values)
+            fraction = larger_positive / size_larger if size_larger != 0 else roots_fraction
             entropy_right = -fraction * log(fraction) - ((1 - fraction) * log(1 - fraction))
 
             ig = entropy_root - entropy_left * size_smaller / len(values) - entropy_right*size_larger / len(values)
@@ -265,24 +265,45 @@ def experiment(X=None, y=None, k_values=None, verbose=False):
               f"Best M={best_k[0]} with accuracy={best_k[1]}")
 
 
-def find_features_to_remove(X_train, y_train, X_test, y_test):
-    classifier = ID3Classifier()
-    classifier.fit(X_train, y_train)
-    original_acc, _ = classifier.predict(X_test, y_test)
-    to_remove = []
-    features = X_train.keys().tolist()
-    for feature in features:
-        sub_train = X_train.copy()
-        sub_train = sub_train.drop([feature], axis=1)
-        sub_test = X_test.copy()
-        sub_test = sub_test.drop([feature], axis=1)
-        classifier.fit(sub_train, y_train)
-        curr_acc, _ = classifier.predict(sub_test, y_test)
-        if curr_acc > original_acc:
-            value = feature, curr_acc - original_acc
-            to_remove.append(value)
-    if args.verbose:
-        print(to_remove)
+def feature_selection(X, y, splits=5):
+    def find_best_features_to_remove(X_train, y_train, X_test, y_test):
+        classifier = ID3Classifier()
+        classifier.fit(X_train, y_train)
+        original_acc, _ = classifier.predict(X_test, y_test)
+        features = X_train.keys().tolist()
+        best_remove = None, original_acc
+        for feature in features:
+            sub_train = X_train.copy()
+            sub_train = sub_train.drop([feature], axis=1)
+            sub_test = X_test.copy()
+            sub_test = sub_test.drop([feature], axis=1)
+            # fit the classifier without the feature
+            classifier.fit(sub_train, y_train)
+            # test without the feature
+            curr_acc, _ = classifier.predict(sub_test, y_test)
+            if curr_acc > best_remove[1]:
+                best_remove = feature, curr_acc
+        if best_remove[0] is None:
+            return []
+        else:
+            sub_train = X_train.copy()
+            sub_train = sub_train.drop([best_remove[0]], axis=1)
+            sub_test = X_test.copy()
+            sub_test = sub_test.drop([best_remove[0]], axis=1)
+            more_features = find_best_features_to_remove(sub_train, y_train, sub_test, y_test)
+            result = [best_remove[0]]
+            result.extend(more_features)
+            return result
+
+    if X is None or y is None:
+        X, y = csv2xy("train.csv")
+    kf = KFold(n_splits=splits, shuffle=True)
+    for count, (train_index, test_index) in enumerate(kf.split(X)):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+        features = find_best_features_to_remove(X_train, y_train, X_test, y_test)
+        if args.verbose:
+            print(f"best features to remove for split {count} are {features}")
 
 
 if __name__ == "__main__":
@@ -294,9 +315,6 @@ if __name__ == "__main__":
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
-    # best features to remove
-    # train_x = train_x.drop(['concavity_mean', 'concavity_se', 'texture_worst'], axis=1)
-    # test_x = test_x.drop(['concavity_mean', 'concavity_se', 'texture_worst'], axis=1)
     # creating a classifier instance
     classifier = ID3Classifier()
     # fitting the classifier
@@ -308,7 +326,7 @@ if __name__ == "__main__":
         print(f"loss without cost optimizing={loss}")
 
     # TODO un-comment this experiment function and choose verbose = True (or run with -v flag) to see results.
-    # kfold_x, kfold_y = csv2xy("kfold.csv")
-    # experiment(verbose=args.verbose, X=kfold_x, y=kfold_y)
+    # experiment(verbose=args.verbose)
 
-    find_features_to_remove(train_x, train_y, test_x, test_y)
+    # TODO un-comment this feature selection function in order to explore which features better be removed.
+    feature_selection(train_x, train_y)
