@@ -1,9 +1,11 @@
-from utils import csv2xy
+from utils import csv2xy, AbstractClassifier
 import argparse
 import matplotlib.pyplot as plt
 from KNNForest import KNNForestClassifier
-from ID3 import find_best_features_to_remove
+from ID3 import find_best_features_to_remove, ID3Node
 from sklearn.model_selection import train_test_split, KFold
+import random
+import numpy as np
 
 
 def remove_bad_features(x, features: list):
@@ -30,15 +32,19 @@ def scalar(series, mean, deviation):
     return series
 
 
-class ImprovedKNNForestClassifier:
+class ImprovedKNNForestClassifier(AbstractClassifier):
     """
     This is a classifier that uses the regular KNNForestClassifier but normalizes the data before it uses it.
     """
     def __init__(self, N=20, k=7):
-        self.knn_classifier = KNNForestClassifier(N=N, k=k)
         self.scaling_consts = []
         self.test_size = 0.33
         self.bad_features = []
+        self.prob_range = 0.3, 0.7
+        self.N = N
+        self.k = k
+        self.forest = []
+        self.centroids = []
 
     def fit_scaling(self, x, y):
         """
@@ -51,14 +57,14 @@ class ImprovedKNNForestClassifier:
         # find features to remove
         X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=self.test_size)
         self.bad_features = []
-        self.bad_features = find_best_features_to_remove(X_train, y_train, X_test, y_test)
+        # self.bad_features = find_best_features_to_remove(X_train, y_train, X_test, y_test)
         # removing selected features
-        subset_data = remove_bad_features(x, self.bad_features)
+        # subset_data = remove_bad_features(x, self.bad_features)
         # clearing the scaling consts if there is another fit for newer data
         self.scaling_consts = []
         # scaling with std scaling
-        features = subset_data.keys().tolist()
-        x_scaled = subset_data.copy()
+        features = x.keys().tolist()
+        x_scaled = x.copy()
         for feature in features:
             mean_val, std_val = x_scaled[feature].mean(), x_scaled[feature].std()
             scaling_const = feature, mean_val, std_val
@@ -77,9 +83,9 @@ class ImprovedKNNForestClassifier:
         :rtype: dataframe
         """
         # removing selected features
-        subset_data = remove_bad_features(x, self.bad_features)
+        # subset_data = remove_bad_features(x, self.bad_features)
         # scaling with std scaling
-        x_scaled = subset_data.copy()
+        x_scaled = x.copy()
         for feature, mean_val, std_val in self.scaling_consts:
             x_scaled[feature] = scalar(x_scaled[feature], mean_val, std_val)
         return x_scaled
@@ -93,7 +99,21 @@ class ImprovedKNNForestClassifier:
         :type y: dataframe
         """
         scaled_x = self.fit_scaling(x, y)
-        self.knn_classifier.fit(scaled_x, y)
+        scaled_x = x
+        self.forest = []
+        self.centroids = []
+        n = len(scaled_x.index)
+        for i in range(self.N):
+            start, stop = self.prob_range
+            portion = random.uniform(start, stop)
+            test_size = 1 - ((n * portion) / n)
+            X_train, X_test, y_train, y_test = train_test_split(scaled_x, y, test_size=test_size)
+            train_data = X_train.copy()
+            train_data["diagnosis"] = y_train
+            self.forest.append(ID3Node(data=train_data))
+            centroid = train_data.copy()
+            centroid = centroid.mean(axis=0)
+            self.centroids.append(centroid)
 
     def predict(self, x, y):
         """
@@ -106,7 +126,35 @@ class ImprovedKNNForestClassifier:
         :rtype: tuple
         """
         scaled_x = self.predict_scaling(x)
-        return self.knn_classifier.predict(scaled_x, y)
+        scaled_x = x
+        data = scaled_x.copy()
+        data["diagnosis"] = y
+        right_predictions, false_positive, false_negative = 0, 0, 0
+        num_of_samples = len(data.index)
+        for row in range(len(data.index)):
+            predictions = []
+            distances = []
+            sample = data.iloc[[row]]
+            for tree, centroid in zip(self.forest, self.centroids):
+                dist = (np.linalg.norm(centroid - sample))
+                value = tree, dist
+                distances.append(value)
+            distances.sort(key=lambda val: val[1])
+            distances = distances[:self.k]
+            for tree, _ in distances:
+                prediction = self.walk_the_tree(tree, row, data)
+                predictions.append(prediction)
+            most_common = max(set(predictions), key=predictions.count)
+            if most_common == data["diagnosis"].iloc[row]:
+                right_predictions += 1
+            else:
+                if most_common == "M":
+                    false_positive += 1
+                else:
+                    false_negative += 1
+        acc = right_predictions / num_of_samples
+        loss = (0.1 * false_positive + false_negative) / num_of_samples
+        return acc, loss
 
 
 def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
@@ -126,14 +174,6 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
         improved_classifier.fit(X_train, y_train)
         acc, loss = improved_classifier.predict(X_test, y_test)
         improved_accuracy.append(acc)
-
-    # for i in range(iterations):
-    #     classifier.fit(train_x, train_y)
-    #     acc, loss = classifier.predict(test_x, test_y)
-    #     accuracy.append(acc)
-    #     improved_classifier.fit(train_x, train_y)
-    #     acc, loss = improved_classifier.predict(test_x, test_y)
-    #     improved_accuracy.append(acc)
     if verbose:
         iterations = [i for i in range(iterations)]
         plt.xlabel("Folds")
@@ -155,4 +195,4 @@ if __name__ == "__main__":
 
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
-    experiment(train_x, train_y, verbose=args.verbose, N=20, k=7, iterations=5)
+    experiment(train_x, train_y, verbose=args.verbose, N=20, k=7, iterations=10)
