@@ -424,7 +424,7 @@ if __name__ == "__main__":
     # print(value_prediction)
 
     # TODO in order to use this function please uncomment it and use graph=True.
-    experiment(graph=True)
+    # experiment(graph=True)
 
     # train_x, train_y = get_data_from_csv("train.csv")
     # test_x, test_y = get_data_from_csv("test.csv")

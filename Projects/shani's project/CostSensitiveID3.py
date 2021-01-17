@@ -1,20 +1,7 @@
-from ID3 import TreeNode, ID3Classifier
+from ID3 import TreeNode, ID3Classifier, get_data_from_csv, build_id3_tree
 from sklearn.model_selection import KFold
 from sklearn.model_selection import train_test_split
-import pandas as pd
 
-def get_data_from_csv(file):
-    """
-    loads the csv data into x,y
-    :param file: file name
-    :type file: string
-    :return: (x, y)
-    :rtype: tuple
-    """
-    temp = pd.read_csv(file)
-    y = temp.iloc[:, 0:1]
-    x = temp.iloc[:, 1:]
-    return x, y
 
 
 
@@ -27,7 +14,7 @@ def check_leaf_and_groupValidation(node, group_validation):
     if node.is_leaf() or len(group_validation.index) == 0:
         return True
     else:
-        False
+         return False
 
 
 class costSensitiveID3Classifier(ID3Classifier):
@@ -56,10 +43,10 @@ class costSensitiveID3Classifier(ID3Classifier):
         check_data = test_x.copy()
         check_data["diagnosis"] = test_y
         self.group_validation = check_data
-        id3tree = TreeNode(data=data_train)
+        id3tree = build_id3_tree(data=data_train)
         # to complete
 
-    def build_prune_tree_validation(self, node: TreeNode, group_validation):
+    def build_prune_tree(self, node: TreeNode, group_validation):
         """
         :param node:
         :param check_valid:
@@ -133,7 +120,7 @@ class costSensitiveID3Classifier(ID3Classifier):
             err_no_prune += res
 
         # check iIf the error is small we will perform pruning
-        if err_prune <  err_no_prune:
+        if err_prune < err_no_prune:
             node_to_check.data = None
             node_to_check.right = None
             node_to_check.left = None
@@ -155,7 +142,6 @@ if __name__ == "__main__":
     classifier.fit(train_x, train_y)
     # predict in test data set
     res_loss, res_accuracy = classifier.predict(test_x, test_y)
-    print(res_accuracy)
     print(res_loss)
 
 
