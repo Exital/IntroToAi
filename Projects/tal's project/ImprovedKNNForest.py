@@ -57,14 +57,14 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         # find features to remove
         X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=self.test_size)
         self.bad_features = []
-        # self.bad_features = find_best_features_to_remove(X_train, y_train, X_test, y_test)
+        self.bad_features = find_best_features_to_remove(X_train, y_train, X_test, y_test)
         # removing selected features
-        # subset_data = remove_bad_features(x, self.bad_features)
+        subset_data = remove_bad_features(x, self.bad_features)
         # clearing the scaling consts if there is another fit for newer data
         self.scaling_consts = []
         # scaling with std scaling
-        features = x.keys().tolist()
-        x_scaled = x.copy()
+        features = subset_data.keys().tolist()
+        x_scaled = subset_data.copy()
         for feature in features:
             mean_val, std_val = x_scaled[feature].mean(), x_scaled[feature].std()
             scaling_const = feature, mean_val, std_val
@@ -83,9 +83,9 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         :rtype: dataframe
         """
         # removing selected features
-        # subset_data = remove_bad_features(x, self.bad_features)
+        subset_data = remove_bad_features(x, self.bad_features)
         # scaling with std scaling
-        x_scaled = x.copy()
+        x_scaled = subset_data.copy()
         for feature, mean_val, std_val in self.scaling_consts:
             x_scaled[feature] = scalar(x_scaled[feature], mean_val, std_val)
         return x_scaled
@@ -99,7 +99,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         :type y: dataframe
         """
         scaled_x = self.fit_scaling(x, y)
-        scaled_x = x
+        scaled_x = scaled_x
         self.forest = []
         self.centroids = []
         n = len(scaled_x.index)
@@ -126,7 +126,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         :rtype: tuple
         """
         scaled_x = self.predict_scaling(x)
-        scaled_x = x
+        scaled_x = scaled_x
         data = scaled_x.copy()
         data["diagnosis"] = y
         right_predictions, false_positive, false_negative = 0, 0, 0
@@ -164,16 +164,21 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
     improved_classifier = ImprovedKNNForestClassifier(N=N, k=k)
 
     kf = KFold(n_splits=iterations, random_state=307965806, shuffle=True)
-    for train_index, test_index in kf.split(X):
+    for count, (train_index, test_index) in enumerate(kf.split(X)):
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
         classifier.fit(X_train, y_train)
         acc, loss = classifier.predict(X_test, y_test)
         accuracy.append(acc)
+        if verbose:
+            print(f"----------- Round {count + 1} -----------")
+            print(f"Accuracy for KNN={acc}")
         improved_classifier.fit(X_train, y_train)
         acc, loss = improved_classifier.predict(X_test, y_test)
         improved_accuracy.append(acc)
+        if verbose:
+            print(f"Accuracy for ImprovedKNN={acc}")
     if verbose:
         iterations = [i for i in range(iterations)]
         plt.xlabel("Folds")
@@ -195,4 +200,14 @@ if __name__ == "__main__":
 
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
-    experiment(train_x, train_y, verbose=args.verbose, N=20, k=7, iterations=10)
+    test_x, test_y = csv2xy("test.csv")
+    experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
+
+    # classifier = KNNForestClassifier(N=15, k=9)
+    # improved_classifier = ImprovedKNNForestClassifier(N=15, k=9)
+    # classifier.fit(train_x, train_y)
+    # acc, _ = classifier.predict(test_x, test_y)
+    # print(acc)
+    # improved_classifier.fit(train_x, train_y)
+    # acc, _ = improved_classifier.predict(test_x, test_y)
+    # print(acc)
