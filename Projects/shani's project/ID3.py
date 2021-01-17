@@ -373,7 +373,7 @@ def experiment(x=None, y=None, k_values=None, graph=False):
     if x is None or y is None:
         x, y = get_data_from_csv("train.csv")
     if k_values is None:
-        k_values = [i for i in range(0, 120, 4)]
+        k_values = [i for i in range(0, 50, 2)]
 
     accuracy_split_values = []
     num_splits = 5
