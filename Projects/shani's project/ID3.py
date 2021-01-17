@@ -181,7 +181,9 @@ class TreeNode:
             return True, DEFAULT_DIAGNOSIS
         values = self.data["diagnosis"].tolist()
         last_val = None
-        for val1,val2 in zip(values,values[1:]):
+        if len(self.data.index) == 1:
+            return True, values[0]
+        for val1,val2 in zip(values, values[1:]):
             if val1 != val2:
                 return None, False
             else:
@@ -255,10 +257,7 @@ class ID3Classifier:
             res = None
             while not node.is_leaf():
                 feature_node = node.feature
-                try:
-                    value = data[feature_node].iloc[row]
-                except:
-                    print("shit")
+                value = data[feature_node].iloc[row]
                 if value <= node.threshold:
                     node = node.left
                 else:
@@ -373,7 +372,11 @@ def experiment(x=None, y=None, k_values=None, graph=False):
     if x is None or y is None:
         x, y = get_data_from_csv("train.csv")
     if k_values is None:
+<<<<<<< HEAD
         k_values = [i for i in range(0, 50, 2)]
+=======
+        k_values = [i for i in range(0, 40, 4)]
+>>>>>>> fbb52660a78fc2a97bbb9e227f72e6e191629048
 
     accuracy_split_values = []
     num_splits = 5
@@ -410,7 +413,8 @@ if __name__ == "__main__":
     value_prediction = classifier.predict(test_x, test_y)
     print(value_prediction)
 
-    experiment(graph=True)
+    # TODO in order to use this function please uncomment it and use graph=True.
+    # experiment(graph=False)
 
     # train_x, train_y = get_data_from_csv("train.csv")
     # test_x, test_y = get_data_from_csv("test.csv")
