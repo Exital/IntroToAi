@@ -271,10 +271,19 @@ class ID3Classifier:
         data = x.copy()
         data["diagnosis"] = y
         correct_predict = 0
+        FN, FP = 0, 0
+        # checks each row in ths data
         for row in range(len(data.index)):
             if tour_tree(self.ID3TreeNode, row) == data["diagnosis"].iloc[row]:
                 correct_predict += 1
-        return correct_predict / len(data.index)
+            else:
+                if tour_tree(self.ID3TreeNode, row) == "M":
+                    FP += 1
+                else:
+                    FN += 1
+        res_loss = (0.1 * FP + FN) / len(data.index)
+        res_accuracy = correct_predict / len(data.index)
+        return res_loss, res_accuracy
 
 
 def check_if_node_has_to_be_pruned(data_root, data_son, pruned_value):
@@ -365,18 +374,14 @@ def graph_demostrate_influence_accuracy(x_values, y_values, x_label="", y_label=
     plt.plot(x_values, y_values)
     plt.show()
 
-def experiment(x=None, y=None, k_values=None, graph=False):
+def experiment(x=None, y=None, m_values=None, graph=False):
     """
 
     """
     if x is None or y is None:
         x, y = get_data_from_csv("train.csv")
-    if k_values is None:
-<<<<<<< HEAD
-        k_values = [i for i in range(0, 50, 2)]
-=======
-        k_values = [i for i in range(0, 40, 4)]
->>>>>>> fbb52660a78fc2a97bbb9e227f72e6e191629048
+    if m_values is None:
+        m_values = [i for i in range(0, 50, 2)]
 
     accuracy_split_values = []
     num_splits = 5
@@ -386,35 +391,40 @@ def experiment(x=None, y=None, k_values=None, graph=False):
         x_train, x_test = x.iloc[train_index], x.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
-        accuracy_k_values = []
-        for k in k_values:
-            classifier = TreeNodeWithPruneClassifier(prune_value=k)
+        accuracy_m_values = []
+        for m in m_values:
+            classifier = TreeNodeWithPruneClassifier(prune_value=m)
             classifier.fit(x_train, y_train)
-            accuracy = classifier.predict(x_test, y_test)
-            accuracy_k_values.append(accuracy)
-        accuracy_split_values.append(accuracy_k_values)
+            loss_val, accuracy = classifier.predict(x_test, y_test)
+            accuracy_m_values.append(accuracy)
+        accuracy_split_values.append(accuracy_m_values)
     avg = [(sum(col)) / len(col) for col in zip(*accuracy_split_values)]
     if graph:
-        graph_demostrate_influence_accuracy(k_values, avg, "value of M", "Accuracy")
-        zipped = list(zip(k_values, avg))
+        graph_demostrate_influence_accuracy(m_values, avg, "value of M", "Accuracy")
+        zipped = list(zip(m_values, avg))
         zipped.sort(key=lambda x: x[1], reverse=True)
-        best_value_k = zipped[0]
-        print(f"Best M value is {best_value_k}")
+        best_value_m = zipped[0]
+        print(f"Best M value is {best_value_m}")
 
 
 if __name__ == "__main__":
-
+    # get tha data from csv files
     train_x, train_y = get_data_from_csv("train.csv")
     test_x, test_y = get_data_from_csv("test.csv")
-
+    # create a ID3Classifier
     classifier = ID3Classifier()
+    # fit the classifier
     classifier.fit(train_x, train_y)
+    # predict in test data set
+    res_loss, res_accuracy = classifier.predict(test_x, test_y)
+    print(res_accuracy)
+    print(res_loss)
 
-    value_prediction = classifier.predict(test_x, test_y)
-    print(value_prediction)
+    # value_prediction = classifier.predict(test_x, test_y)
+    # print(value_prediction)
 
     # TODO in order to use this function please uncomment it and use graph=True.
-    # experiment(graph=False)
+    experiment(graph=True)
 
     # train_x, train_y = get_data_from_csv("train.csv")
     # test_x, test_y = get_data_from_csv("test.csv")
