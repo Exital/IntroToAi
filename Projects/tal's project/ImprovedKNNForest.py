@@ -38,7 +38,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
     """
     def __init__(self, N=15, k=9):
         self.scaling_consts = []
-        self.test_size = 0.2
+        self.test_size = 0.33
         self.bad_features = []
         self.prob_range = 0.3, 0.7
         self.N = N
@@ -180,11 +180,6 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
         improved_classifier.fit(X_train, y_train)
         acc, loss = improved_classifier.predict(X_test, y_test)
         improved_accuracy.append(acc)
-        # remove before submission
-        # --------------------------------------
-        if accuracy[-1] > improved_accuracy[-1]:
-            return 0, 0, 0
-        # --------------------------------------
         if verbose:
             print(f"Accuracy for ImprovedKNN={acc}")
     regular = sum(accuracy) / len(accuracy)
@@ -220,7 +215,7 @@ if __name__ == "__main__":
     while True:
         result = experiment(kfold_x, kfold_y, verbose=args.verbose, N=15, k=9, iterations=5)
         improvement, improveKnnAcc, regularKnnAcc = result
-        if improvement > 0:
+        if improvement > 0.015:
             beep()
         if regularKnnAcc > 0.96 and improvement > 0.02:
             beep()
