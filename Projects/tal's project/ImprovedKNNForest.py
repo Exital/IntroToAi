@@ -44,7 +44,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         self.N = N
         self.k = k
         self.forest = []
-        self.database = []
+        self.centroids = []
 
     def fit_scaling(self, x, y):
         """
@@ -111,7 +111,9 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
             train_data = X_train.copy()
             train_data["diagnosis"] = y_train
             self.forest.append(ID3Node(data=train_data))
-            self.database.append(X_train)
+            centroid = train_data.copy()
+            centroid = centroid.mean(axis=0)
+            self.centroids.append(centroid)
 
     def predict(self, x, y):
         """
@@ -135,15 +137,9 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
             sample = data.iloc[[row]].copy()
             sample = remove_bad_features(sample, ["diagnosis"])
             sample = sample.mean(axis=0)
-            for tree, tree_data in zip(self.forest, self.database):
-                min_dist = float('inf')
-                for idx in range(len(tree_data.index)):
-                    train_sample = tree_data.iloc[[idx]].copy()
-                    train_sample = train_sample.mean(axis=0)
-                    dist = (np.linalg.norm(train_sample - sample))
-                    if dist < min_dist:
-                        min_dist = dist
-                value = tree, min_dist
+            for tree, centroid in zip(self.forest, self.centroids):
+                dist = (np.linalg.norm(centroid - sample))
+                value = tree, dist
                 distances.append(value)
             distances.sort(key=lambda val: val[1])
             distances = distances[:self.k]
