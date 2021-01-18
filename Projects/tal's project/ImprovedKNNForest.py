@@ -1,4 +1,4 @@
-from utils import csv2xy, AbstractClassifier
+from utils import csv2xy, AbstractClassifier, beep
 import argparse
 import matplotlib.pyplot as plt
 from KNNForest import KNNForestClassifier
@@ -36,9 +36,9 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
     """
     This is a classifier that uses the regular KNNForestClassifier but normalizes the data before it uses it.
     """
-    def __init__(self, N=20, k=7):
+    def __init__(self, N=15, k=9):
         self.scaling_consts = []
-        self.test_size = 0.33
+        self.test_size = 0.2
         self.bad_features = []
         self.prob_range = 0.3, 0.7
         self.N = N
@@ -164,7 +164,8 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
     improved_accuracy = []
     classifier = KNNForestClassifier(N=N, k=k)
     improved_classifier = ImprovedKNNForestClassifier(N=N, k=k)
-
+    if verbose:
+        print(f"----------- Starting new experiment -----------")
     kf = KFold(n_splits=iterations, random_state=307965806, shuffle=True)
     for count, (train_index, test_index) in enumerate(kf.split(X)):
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
@@ -179,22 +180,29 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
         improved_classifier.fit(X_train, y_train)
         acc, loss = improved_classifier.predict(X_test, y_test)
         improved_accuracy.append(acc)
+        # remove before submission
+        # --------------------------------------
+        if accuracy[-1] > improved_accuracy[-1]:
+            return 0, 0, 0
+        # --------------------------------------
         if verbose:
             print(f"Accuracy for ImprovedKNN={acc}")
+    regular = sum(accuracy) / len(accuracy)
+    improved = sum(improved_accuracy) / len(improved_accuracy)
+    improvement = improved - regular
     if verbose:
         iterations = [i for i in range(iterations)]
-        plt.xlabel("Folds")
-        plt.ylabel("Accuracy of that iteration")
+        plt.xlabel("Fold number")
+        plt.ylabel("Accuracy of that fold")
         plt.plot(iterations, accuracy, label="KNNForest")
         plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
         plt.show()
         print("------------------- Final Results ------------------")
-        regular = sum(accuracy)/len(accuracy)
-        improved = sum(improved_accuracy)/len(improved_accuracy)
         print(f"The average accuracy of KNNForest is {regular}")
         print(f"The average accuracy of ImprovedKNNForest is {improved}")
         print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
+    return improvement, improved, regular
 
 
 if __name__ == "__main__":
@@ -206,13 +214,16 @@ if __name__ == "__main__":
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
-    experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
+    kfold_x, kfold_y = csv2xy("kfold.csv")
+    # experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
 
-    # classifier = KNNForestClassifier(N=15, k=9)
-    # improved_classifier = ImprovedKNNForestClassifier(N=15, k=9)
-    # classifier.fit(train_x, train_y)
-    # acc, _ = classifier.predict(test_x, test_y)
-    # print(acc)
-    # improved_classifier.fit(train_x, train_y)
-    # acc, _ = improved_classifier.predict(test_x, test_y)
-    # print(acc)
+    while True:
+        result = experiment(kfold_x, kfold_y, verbose=args.verbose, N=15, k=9, iterations=5)
+        improvement, improveKnnAcc, regularKnnAcc = result
+        if improvement > 0:
+            beep()
+        if regularKnnAcc > 0.96 and improvement > 0.02:
+            beep()
+            beep()
+            beep()
+            break

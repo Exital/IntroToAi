@@ -3,6 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from numpy import log2
 DEFAULT_CLASSIFICATION = "M"
+import winsound
 
 
 def log(x):
@@ -61,4 +62,10 @@ def graphPlotAndShow(x_values, y_values, x_label="", y_label=""):
     plt.ylabel(y_label)
     plt.plot(x_values, y_values)
     plt.show()
+
+
+def beep():
+    frequency = 2500  # Set Frequency To 2500 Hertz
+    duration = 1000  # Set Duration To 1000 ms == 1 second
+    winsound.Beep(frequency, duration)
 
