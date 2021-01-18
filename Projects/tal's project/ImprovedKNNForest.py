@@ -40,7 +40,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         self.scaling_consts = []
         self.test_size = 0.33
         self.bad_features = []
-        self.prob_range = 0.3, 0.7
+        self.prob_range = 0.6, 0.7
         self.N = N
         self.k = k
         self.forest = []
@@ -56,15 +56,15 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         """
         # find features to remove
         X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=self.test_size)
-        self.bad_features = []
-        self.bad_features = find_best_features_to_remove(X_train, y_train, X_test, y_test)
+        # self.bad_features = []
+        # self.bad_features = find_best_features_to_remove(X_train, y_train, X_test, y_test)
         # removing selected features
-        subset_data = remove_bad_features(x, self.bad_features)
+        # subset_data = remove_bad_features(x, self.bad_features)
         # clearing the scaling consts if there is another fit for newer data
         self.scaling_consts = []
         # scaling with std scaling
-        features = subset_data.keys().tolist()
-        x_scaled = subset_data.copy()
+        features = x.keys().tolist()
+        x_scaled = x.copy()
         for feature in features:
             mean_val, std_val = x_scaled[feature].mean(), x_scaled[feature].std()
             scaling_const = feature, mean_val, std_val
@@ -83,9 +83,9 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         :rtype: dataframe
         """
         # removing selected features
-        subset_data = remove_bad_features(x, self.bad_features)
+        # subset_data = remove_bad_features(x, self.bad_features)
         # scaling with std scaling
-        x_scaled = subset_data.copy()
+        x_scaled = x.copy()
         for feature, mean_val, std_val in self.scaling_consts:
             x_scaled[feature] = scalar(x_scaled[feature], mean_val, std_val)
         return x_scaled
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     while True:
         result = experiment(kfold_x, kfold_y, verbose=args.verbose, N=15, k=9, iterations=5)
         improvement, improveKnnAcc, regularKnnAcc = result
-        if improvement > 0.012:
+        if improvement > 0.018:
             beep()
         if regularKnnAcc > 0.96 and improvement > 0.02:
             beep()
