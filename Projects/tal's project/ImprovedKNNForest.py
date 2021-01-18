@@ -134,7 +134,9 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         for row in range(len(data.index)):
             predictions = []
             distances = []
-            sample = data.iloc[[row]]
+            sample = data.iloc[[row]].copy()
+            sample = remove_bad_features(sample, ["diagnosis"])
+            sample = sample.mean(axis=0)
             for tree, centroid in zip(self.forest, self.centroids):
                 dist = (np.linalg.norm(centroid - sample))
                 value = tree, dist
@@ -187,9 +189,12 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
         plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
         plt.show()
-
-        print(f"The average accuracy of KNNForest is {sum(accuracy)/len(accuracy)}")
-        print(f"The average accuracy of ImprovedKNNForest is {sum(improved_accuracy)/len(improved_accuracy)}")
+        print("------------------- Final Results ------------------")
+        regular = sum(accuracy)/len(accuracy)
+        improved = sum(improved_accuracy)/len(improved_accuracy)
+        print(f"The average accuracy of KNNForest is {regular}")
+        print(f"The average accuracy of ImprovedKNNForest is {improved}")
+        print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
 
 
 if __name__ == "__main__":
