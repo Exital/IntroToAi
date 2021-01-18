@@ -215,7 +215,7 @@ if __name__ == "__main__":
     while True:
         result = experiment(kfold_x, kfold_y, verbose=args.verbose, N=15, k=9, iterations=5)
         improvement, improveKnnAcc, regularKnnAcc = result
-        if improvement > 0.015:
+        if improvement > 0.012:
             beep()
         if regularKnnAcc > 0.96 and improvement > 0.02:
             beep()
