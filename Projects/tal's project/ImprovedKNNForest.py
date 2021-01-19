@@ -132,7 +132,6 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         right_predictions, false_positive, false_negative = 0, 0, 0
         num_of_samples = len(data.index)
         for row in range(len(data.index)):
-            predictions = []
             distances = []
             sample = data.iloc[[row]].copy()
             sample = remove_bad_features(sample, ["diagnosis"])
@@ -143,14 +142,21 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
                 distances.append(value)
             distances.sort(key=lambda val: val[1])
             distances = distances[:self.k]
-            for tree, _ in distances:
+            sick, healthy = 0, 0
+            for tree, dist in distances:
                 prediction = self.walk_the_tree(tree, row, data)
-                predictions.append(prediction)
-            most_common = max(set(predictions), key=predictions.count)
-            if most_common == data["diagnosis"].iloc[row]:
+                if prediction == "M":
+                    sick += 1/dist
+                else:
+                    healthy += 1/dist
+            if sick >= healthy:
+                prediction = "M"
+            else:
+                prediction = "B"
+            if prediction == data["diagnosis"].iloc[row]:
                 right_predictions += 1
             else:
-                if most_common == "M":
+                if prediction == "M":
                     false_positive += 1
                 else:
                     false_negative += 1
