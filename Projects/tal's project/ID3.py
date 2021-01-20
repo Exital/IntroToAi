@@ -1,7 +1,7 @@
 from utils import csv2xy, AbstractClassifier, graphPlotAndShow, log, DEFAULT_CLASSIFICATION
 import argparse
-from sklearn.model_selection import KFold
-
+from sklearn.model_selection import KFold, train_test_split
+import numpy as np
 
 class ID3Node:
     """
@@ -307,6 +307,42 @@ def feature_selection(X, y, splits=5):
             print(f"best features to remove for split {count} are {features}")
 
 
+def permute_feature(data, feature):
+    permutation = data.copy()
+    permutation[feature] = np.random.permutation(permutation[feature])
+    return permutation
+
+
+def compute_feature_importance(X, y, splits=5):
+    weights = []
+    features = X.keys().tolist()
+    for feature in features:
+        errors = []
+        kf = KFold(n_splits=splits, random_state=307965806, shuffle=True)
+        for train_index, test_index in kf.split(X):
+            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+            classifier = ID3Classifier()
+            classifier.fit(X_train, y_train)
+            original_acc, _ = classifier.predict(X_test, y_test)
+
+            permuted_data = permute_feature(X_train, feature)
+            classifier.fit(permuted_data, y_train)
+            new_acc, _ = classifier.predict(X_test, y_test)
+
+            error = original_acc - new_acc
+            errors.append(error)
+        avg_error = sum(errors) / len(errors)
+        weight = feature, avg_error
+        weights.append(weight)
+    sorted_weights = sorted(weights, key=lambda x: x[1], reverse=True)
+    max_weight = sorted_weights[0]
+    max_error = max_weight[1]
+    normalized_weights = [(feature, error / max_error) for feature, error in weights]
+    return normalized_weights
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -330,4 +366,7 @@ if __name__ == "__main__":
     # experiment(verbose=args.verbose)
 
     # TODO un-comment this feature selection function in order to explore which features better be removed.
-    feature_selection(train_x, train_y)
+    #feature_selection(train_x, train_y)
+
+    weights = compute_feature_importance(train_x, train_y)
+    print(weights)
