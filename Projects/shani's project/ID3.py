@@ -138,7 +138,7 @@ class TreeNode:
         """
         function to sum values of two sequential values
         :param val_feature_list: list of feature's values
-        :return: list of the new values
+        :return: list of the updated values
         :rtype: list
         """
         soreted_values = sorted(val_feature_list, key=lambda x: x)

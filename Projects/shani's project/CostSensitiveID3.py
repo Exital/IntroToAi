@@ -56,7 +56,7 @@ class costSensitiveID3Classifier(ID3Classifier):
         :param test_size:
         :return:
         """
-        train_x, test_x, train_y, test_y = train_test_split(x, y, test_size=test_size, random_state=424)
+        train_x, test_x, train_y, test_y = train_test_split(x, y, test_size=test_size)
         data_train = train_x.copy()
         data_train["diagnosis"] = train_y
         check_data = test_x.copy()
