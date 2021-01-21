@@ -7,7 +7,7 @@ import numpy as np
 
 
 class KNNForestClassifier(AbstractClassifier):
-    def __init__(self, N=20, k=7):
+    def __init__(self, N=15, k=9):
         super().__init__()
         self.prob_range = 0.3, 0.7
         self.N = N

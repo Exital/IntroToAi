@@ -308,12 +308,32 @@ def feature_selection(X, y, splits=5):
 
 
 def permute_feature(data, feature):
+    """
+    That function permutes the values on the column of the feature in order to check its importance to accuracy.
+    :param data: the dataset
+    :type data: dataframe
+    :param feature: the feature to permute
+    :type feature: str
+    :return: the permuted dataset
+    :rtype: dataframe
+    """
     permutation = data.copy()
     permutation[feature] = np.random.permutation(permutation[feature])
     return permutation
 
 
-def compute_feature_importance(X, y, splits=5):
+def compute_feature_importance(X, y, splits=5, verbose=False):
+    """
+    This function will use kfold cross validation in order to compute weights for the features.
+    :param X: dataset
+    :type X: dataframe
+    :param y: labels
+    :type y: datafram
+    :param splits: number of splits for the kfold
+    :type splits: int
+    :return: the weight list
+    :rtype: list[Tuple]
+    """
     weights = []
     features = X.keys().tolist()
     for feature in features:
@@ -331,7 +351,7 @@ def compute_feature_importance(X, y, splits=5):
             classifier.fit(permuted_data, y_train)
             new_acc, _ = classifier.predict(X_test, y_test)
 
-            error = original_acc - new_acc
+            error = abs(original_acc - new_acc)
             errors.append(error)
         avg_error = sum(errors) / len(errors)
         weight = feature, avg_error
@@ -340,6 +360,9 @@ def compute_feature_importance(X, y, splits=5):
     max_weight = sorted_weights[0]
     max_error = max_weight[1]
     normalized_weights = [(feature, error / max_error) for feature, error in weights]
+    if args.verbose:
+        print("------------ Feature's weights -------------")
+        print(normalized_weights)
     return normalized_weights
 
 
@@ -368,5 +391,7 @@ if __name__ == "__main__":
     # TODO un-comment this feature selection function in order to explore which features better be removed.
     #feature_selection(train_x, train_y)
 
-    weights = compute_feature_importance(train_x, train_y)
-    print(weights)
+    # TODO un-comment those 3 lines in order to compute weights for the features.
+    # TODO run with -v flag or set verbose=True to see the printed weights.
+    # kfold_x, kfold_y = csv2xy("kfold.csv")
+    # weights = compute_feature_importance(kfold_x, kfold_y, verbose=args.verbose)

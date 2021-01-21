@@ -1,4 +1,4 @@
-from utils import csv2xy, AbstractClassifier, beep
+from utils import csv2xy, AbstractClassifier, beep, WEIGHTS
 import argparse
 import matplotlib.pyplot as plt
 from KNNForest import KNNForestClassifier
@@ -6,6 +6,7 @@ from ID3 import find_best_features_to_remove, ID3Node
 from sklearn.model_selection import train_test_split, KFold
 import random
 import numpy as np
+from math import e
 
 
 def remove_bad_features(x, features: list):
@@ -32,15 +33,37 @@ def scalar(series, mean, deviation):
     return series
 
 
+def get_weight(feature):
+    for f, w in WEIGHTS:
+        if f == feature:
+            return w
+    raise ValueError("No such feature so no weight!")
+
+
+def distance(v1, v2, weighted=False):
+    if not weighted:
+        return np.linalg.norm(v1 - v2)
+    else:
+        v1_weighted = v1.copy()
+        v2_weighted = v2.copy()
+        for index, value in v1_weighted.items():
+            weight = get_weight(index)
+            v1_weighted.loc[index] = value * weight
+        for index, value in v2_weighted.items():
+            weight = get_weight(index)
+            v2_weighted.loc[index] = value * weight
+        return np.linalg.norm(v1_weighted - v2_weighted)
+
+
 class ImprovedKNNForestClassifier(AbstractClassifier):
     """
     This is a classifier that uses the regular KNNForestClassifier but normalizes the data before it uses it.
     """
-    def __init__(self, N=15, k=9):
+    def __init__(self, N=25, k=11):
         self.scaling_consts = []
         self.test_size = 0.33
         self.bad_features = []
-        self.prob_range = 0.6, 0.7
+        self.prob_range = 0.3, 0.32
         self.N = N
         self.k = k
         self.forest = []
@@ -137,7 +160,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
             sample = remove_bad_features(sample, ["diagnosis"])
             sample = sample.mean(axis=0)
             for tree, centroid in zip(self.forest, self.centroids):
-                dist = (np.linalg.norm(centroid - sample))
+                dist = distance(centroid, sample, weighted=True)
                 value = tree, dist
                 distances.append(value)
             distances.sort(key=lambda val: val[1])
@@ -146,9 +169,9 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
             for tree, dist in distances:
                 prediction = self.walk_the_tree(tree, row, data)
                 if prediction == "M":
-                    sick += 1/dist
+                    sick += e ** -dist
                 else:
-                    healthy += 1/dist
+                    healthy += e ** -dist
             if sick >= healthy:
                 prediction = "M"
             else:
@@ -206,6 +229,44 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
     return improvement, improved, regular
 
 
+def improvement_experiment(x_train, y_train, x_test, y_test, iterations=25, verbose=False):
+    if verbose:
+        print(f"----------- Starting experiment with {iterations} iterations -----------")
+    classifier = KNNForestClassifier()
+    improved_classifier = ImprovedKNNForestClassifier()
+    accuracy = []
+    improved_accuracy = []
+    for iter in range(iterations):
+        if verbose:
+            print(f"----------- Round {iter + 1} -----------")
+        classifier.fit(x_train, y_train)
+        acc, _ = classifier.predict(x_test, y_test)
+        if verbose:
+            print(f"Accuracy for KNN={acc}")
+        improved_classifier.fit(x_train, y_train)
+        improved_acc, _ = improved_classifier.predict(x_test, y_test)
+        if verbose:
+            print(f"Accuracy for ImprovedKNN={improved_acc}")
+        accuracy.append(acc)
+        improved_accuracy.append(improved_acc)
+    regular = sum(accuracy) / len(accuracy)
+    improved = sum(improved_accuracy) / len(improved_accuracy)
+    improvement = improved - regular
+    if verbose:
+        iterations = [i for i in range(iterations)]
+        plt.xlabel("Iteration number")
+        plt.ylabel("Accuracy of that iteration")
+        plt.plot(iterations, accuracy, label="KNNForest")
+        plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+        plt.show()
+        print("------------------- Final Results ------------------")
+        print(f"The average accuracy of KNNForest is {regular}")
+        print(f"The average accuracy of ImprovedKNNForest is {improved}")
+        print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
+    return improvement, improved, regular
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -219,12 +280,6 @@ if __name__ == "__main__":
     # experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
 
     while True:
-        result = experiment(kfold_x, kfold_y, verbose=args.verbose, N=15, k=9, iterations=5)
-        improvement, improveKnnAcc, regularKnnAcc = result
-        if improvement > 0.018:
-            beep()
-        if regularKnnAcc > 0.96 and improvement > 0.02:
-            beep()
-            beep()
-            beep()
+        imp, _, _ = improvement_experiment(train_x, train_y, test_x, test_y, iterations=5, verbose=args.verbose)
+        if imp > 0.015:
             break
