@@ -15,7 +15,7 @@ class ID3CostSensitiveClassifier(ID3Classifier):
         self.cost_FN = cost_fn
         self.cost_FP = cost_fp
 
-    def fit(self, x, y, test_size=0.57):
+    def fit(self, x, y, test_size=0.58):
         """
         Builds an ID3Tree and than prune it to improve costs
         :param x: dataset
@@ -25,7 +25,7 @@ class ID3CostSensitiveClassifier(ID3Classifier):
         :param test_size: the fraction for splitting
         :type test_size: float
         """
-        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size)
+        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=426)
         train_data = X_train.copy()
         train_data["diagnosis"] = y_train
         validation_data = X_test.copy()
@@ -154,6 +154,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '-verbose', dest="verbose", action='store_true', help="Show more information")
+    parser.add_argument('-find_validation_size', dest="find_validation_size",
+                        action='store_true', help="Running a test to find best validation size")
+
     args = parser.parse_args()
 
     # retrieving the data from the csv files
@@ -166,9 +169,11 @@ if __name__ == "__main__":
     # predicting on the test data set
     accuracy, loss = classifier.predict(test_x, test_y)
     if args.verbose:
+        print(f"accuracy with cost optimizing={accuracy}")
         print(f"loss with cost optimizing={loss}")
     else:
         print(loss)
 
-    # TODO in order to use the experiment uncomment and use -v flag or verbose = True.
-    # experiment(verbose=args.verbose)
+    # Todo - in order to find the validation size run CostSensitiveID3.py with -find_validation_size flag.
+    if args.find_validation_size:
+        experiment(verbose=True)

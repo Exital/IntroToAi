@@ -1,7 +1,6 @@
 from utils import csv2xy, AbstractClassifier, graphPlotAndShow, log, DEFAULT_CLASSIFICATION
 import argparse
-from sklearn.model_selection import KFold, train_test_split
-import numpy as np
+from sklearn.model_selection import KFold
 
 
 class ID3Node:
@@ -122,10 +121,20 @@ class ID3Node:
 
 
 class ID3Classifier(AbstractClassifier):
+    """
+    A classifier that utilizes the ID3 tree to fit and predict.
+    """
     def __init__(self):
         self.id3tree = None
 
     def fit(self, x, y):
+        """
+        fitting the data into a ID3 tree.
+        :param x: dataset
+        :type x: dataframe
+        :param y: labels
+        :type y: dataframe
+        """
         data = x.copy()
         data["diagnosis"] = y
         self.id3tree = ID3Node(data=data)
@@ -164,6 +173,9 @@ class ID3Classifier(AbstractClassifier):
 
 
 class ID3PruningNode(ID3Node):
+    """
+    A Node of a ID3 tree with pruning option.
+    """
     def __init__(self, data=None, diag=None, m=8):
         self.feature = None
         self.slicing_val = None
@@ -214,6 +226,9 @@ class ID3PruningNode(ID3Node):
 
 
 class ID3PruneClassifier(ID3Classifier):
+    """
+    A classifier utilizes the ability of pruning ID3 node.
+    """
     def __init__(self, pruning_value=8):
         super().__init__()
         self.pruning_value = pruning_value
@@ -266,111 +281,11 @@ def experiment(X=None, y=None, k_values=None, verbose=False):
               f"Best M={best_k[0]} with accuracy={best_k[1]}")
 
 
-def find_best_features_to_remove(X_train, y_train, X_test, y_test):
-    classifier = ID3Classifier()
-    classifier.fit(X_train, y_train)
-    original_acc, _ = classifier.predict(X_test, y_test)
-    features = X_train.keys().tolist()
-    best_remove = None, original_acc
-    for feature in features:
-        sub_train = X_train.copy()
-        sub_train = sub_train.drop([feature], axis=1)
-        sub_test = X_test.copy()
-        sub_test = sub_test.drop([feature], axis=1)
-        # fit the classifier without the feature
-        classifier.fit(sub_train, y_train)
-        # test without the feature
-        curr_acc, _ = classifier.predict(sub_test, y_test)
-        if curr_acc > best_remove[1]:
-            best_remove = feature, curr_acc
-    if best_remove[0] is None:
-        return []
-    else:
-        sub_train = X_train.copy()
-        sub_train = sub_train.drop([best_remove[0]], axis=1)
-        sub_test = X_test.copy()
-        sub_test = sub_test.drop([best_remove[0]], axis=1)
-        more_features = find_best_features_to_remove(sub_train, y_train, sub_test, y_test)
-        result = [best_remove[0]]
-        result.extend(more_features)
-        return result
-
-
-def feature_selection(X, y, splits=5):
-    if X is None or y is None:
-        X, y = csv2xy("train.csv")
-    kf = KFold(n_splits=splits, shuffle=True)
-    for count, (train_index, test_index) in enumerate(kf.split(X)):
-        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-        features = find_best_features_to_remove(X_train, y_train, X_test, y_test)
-        if args.verbose:
-            print(f"best features to remove for split {count} are {features}")
-
-
-def permute_feature(data, feature):
-    """
-    That function permutes the values on the column of the feature in order to check its importance to accuracy.
-    :param data: the dataset
-    :type data: dataframe
-    :param feature: the feature to permute
-    :type feature: str
-    :return: the permuted dataset
-    :rtype: dataframe
-    """
-    permutation = data.copy()
-    permutation[feature] = np.random.permutation(permutation[feature])
-    return permutation
-
-
-def compute_feature_importance(X, y, splits=5, verbose=False):
-    """
-    This function will use kfold cross validation in order to compute weights for the features.
-    :param X: dataset
-    :type X: dataframe
-    :param y: labels
-    :type y: datafram
-    :param splits: number of splits for the kfold
-    :type splits: int
-    :return: the weight list
-    :rtype: list[Tuple]
-    """
-    weights = []
-    features = X.keys().tolist()
-    for feature in features:
-        errors = []
-        kf = KFold(n_splits=splits, random_state=307965806, shuffle=True)
-        for train_index, test_index in kf.split(X):
-            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-
-            classifier = ID3Classifier()
-            classifier.fit(X_train, y_train)
-            original_acc, _ = classifier.predict(X_test, y_test)
-
-            permuted_data = permute_feature(X_train, feature)
-            classifier.fit(permuted_data, y_train)
-            new_acc, _ = classifier.predict(X_test, y_test)
-
-            error = abs(original_acc - new_acc)
-            errors.append(error)
-        avg_error = sum(errors) / len(errors)
-        weight = feature, avg_error
-        weights.append(weight)
-    sorted_weights = sorted(weights, key=lambda x: x[1], reverse=True)
-    max_weight = sorted_weights[0]
-    max_error = max_weight[1]
-    normalized_weights = [(feature, error / max_error) for feature, error in weights]
-    if args.verbose:
-        print("------------ Feature's weights -------------")
-        print(normalized_weights)
-    return normalized_weights
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '-verbose', dest="verbose", action='store_true', help="Show more information")
+    parser.add_argument('-find_m_value', dest="find_m_value", action='store_true', help="Running a test to find best M")
     args = parser.parse_args()
 
     # retrieving the data from the csv files
@@ -382,17 +297,12 @@ if __name__ == "__main__":
     classifier.fit(train_x, train_y)
     # predicting on the test data set
     accuracy, loss = classifier.predict(test_x, test_y)
-    print(accuracy)
     if args.verbose:
+        print(f"The accuracy of ID3Classifier={accuracy}")
         print(f"loss without cost optimizing={loss}")
+    else:
+        print(accuracy)
 
-    # TODO un-comment this experiment function and choose verbose = True (or run with -v flag) to see results.
-    # experiment(verbose=args.verbose)
-
-    # TODO un-comment this feature selection function in order to explore which features better be removed.
-    #feature_selection(train_x, train_y)
-
-    # TODO un-comment those 2 lines in order to compute weights for the features.
-    # TODO run with -v flag or set verbose=True to see the printed weights.
-    # kfold_x, kfold_y = csv2xy("kfold.csv")
-    # weights = compute_feature_importance(kfold_x, kfold_y, verbose=args.verbose)
+    # Todo - in order to run the experiment of finding the best M value run ID3.py with -find_m_value flag.
+    if args.find_m_value:
+        experiment(verbose=True)

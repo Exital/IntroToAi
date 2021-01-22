@@ -2,7 +2,7 @@ from utils import csv2xy, AbstractClassifier, beep, WEIGHTS
 import argparse
 import matplotlib.pyplot as plt
 from KNNForest import KNNForestClassifier
-from ID3 import find_best_features_to_remove, ID3Node
+from ID3 import ID3Node, ID3Classifier
 from sklearn.model_selection import train_test_split, KFold
 import random
 import numpy as np
@@ -267,16 +267,83 @@ def improvement_experiment(x_train, y_train, x_test, y_test, iterations=25, verb
     return improvement, improved, regular
 
 
+def permute_feature(data, feature):
+    """
+    That function permutes the values on the column of the feature in order to check its importance to accuracy.
+    :param data: the dataset
+    :type data: dataframe
+    :param feature: the feature to permute
+    :type feature: str
+    :return: the permuted dataset
+    :rtype: dataframe
+    """
+    permutation = data.copy()
+    permutation[feature] = np.random.permutation(permutation[feature])
+    return permutation
+
+
+def compute_feature_importance(X, y, splits=5, verbose=False):
+    """
+    This function will use kfold cross validation in order to compute weights for the features.
+    :param X: dataset
+    :type X: dataframe
+    :param y: labels
+    :type y: datafram
+    :param splits: number of splits for the kfold
+    :type splits: int
+    :param verbose: printing outputs
+    :type verbose: bool
+    :return: the weight list
+    :rtype: list[Tuple]
+    """
+    weights = []
+    features = X.keys().tolist()
+    for feature in features:
+        errors = []
+        kf = KFold(n_splits=splits, random_state=307965806, shuffle=True)
+        for train_index, test_index in kf.split(X):
+            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+            classifier = ID3Classifier()
+            classifier.fit(X_train, y_train)
+            original_acc, _ = classifier.predict(X_test, y_test)
+
+            permuted_data = permute_feature(X_train, feature)
+            classifier.fit(permuted_data, y_train)
+            new_acc, _ = classifier.predict(X_test, y_test)
+
+            error = abs(original_acc - new_acc)
+            errors.append(error)
+        avg_error = sum(errors) / len(errors)
+        weight = feature, avg_error
+        weights.append(weight)
+    sorted_weights = sorted(weights, key=lambda x: x[1], reverse=True)
+    max_weight = sorted_weights[0]
+    max_error = max_weight[1]
+    normalized_weights = [(feature, error / max_error) for feature, error in weights]
+    if args.verbose:
+        print("------------ Feature's weights -------------")
+        print(normalized_weights)
+    return normalized_weights
+
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '-verbose', dest="verbose", action='store_true', help="Show more information")
+    parser.add_argument('-feature_weights', dest="feature_weights", action='store_true', help="Show more information")
     args = parser.parse_args()
 
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
-    kfold_x, kfold_y = csv2xy("kfold.csv")
+
+    # Todo - in order to compute feature weights run ImprovedKNNForest.py with -feature_weights flag.
+    if args.feature_weights:
+        train_x, train_y = csv2xy("train.csv")
+        weights = compute_feature_importance(train_x, train_y, verbose=True)
+
     # experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
 
     while True:
