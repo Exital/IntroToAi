@@ -3,6 +3,7 @@ import argparse
 from sklearn.model_selection import KFold, train_test_split
 import numpy as np
 
+
 class ID3Node:
     """
     The ID3 class that creates the whole ID3Tree.
@@ -391,7 +392,7 @@ if __name__ == "__main__":
     # TODO un-comment this feature selection function in order to explore which features better be removed.
     #feature_selection(train_x, train_y)
 
-    # TODO un-comment those 3 lines in order to compute weights for the features.
+    # TODO un-comment those 2 lines in order to compute weights for the features.
     # TODO run with -v flag or set verbose=True to see the printed weights.
     # kfold_x, kfold_y = csv2xy("kfold.csv")
     # weights = compute_feature_importance(kfold_x, kfold_y, verbose=args.verbose)
