@@ -15,7 +15,7 @@ class ID3CostSensitiveClassifier(ID3Classifier):
         self.cost_FN = cost_fn
         self.cost_FP = cost_fp
 
-    def fit(self, x, y, test_size=0.6):
+    def fit(self, x, y, test_size=0.57):
         """
         Builds an ID3Tree and than prune it to improve costs
         :param x: dataset
@@ -25,7 +25,7 @@ class ID3CostSensitiveClassifier(ID3Classifier):
         :param test_size: the fraction for splitting
         :type test_size: float
         """
-        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=426)
+        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size)
         train_data = X_train.copy()
         train_data["diagnosis"] = y_train
         validation_data = X_test.copy()
