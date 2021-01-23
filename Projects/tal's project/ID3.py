@@ -248,10 +248,8 @@ def experiment(X=None, y=None, m_values=None, splits=5):
     :type X: dataframe
     :param y: y dataset
     :type y: dataframe
-    :param k_values: values to cross validate
-    :type k_values: list
-    :param verbose: True if you want to see graph and summary
-    :type verbose: bool
+    :param m_values: values to cross validate
+    :type m_values: list
     :param splits: number of splits for the kfold
     :type splits: int
     """
