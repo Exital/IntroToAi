@@ -206,13 +206,13 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         return acc, loss
 
 
-def kfold_experiment(X, y, iterations=5):
+def kfold_experiment(X, y, splits=5):
     accuracy = []
     improved_accuracy = []
     classifier = KNNForestClassifier()
     improved_classifier = ImprovedKNNForestClassifier()
-    print(f"----------- Starting new experiment -----------")
-    kf = KFold(n_splits=iterations, random_state=307965806, shuffle=True)
+    print(f"----------- Starting a kfold experiment with {splits} splits -----------")
+    kf = KFold(n_splits=splits, random_state=307965806, shuffle=True)
     for count, (train_index, test_index) in enumerate(kf.split(X)):
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
         y_train, y_test = y.iloc[train_index], y.iloc[test_index]
@@ -229,7 +229,7 @@ def kfold_experiment(X, y, iterations=5):
     regular = sum(accuracy) / len(accuracy)
     improved = sum(improved_accuracy) / len(improved_accuracy)
     improvement = improved - regular
-    iterations = [i for i in range(iterations)]
+    iterations = [i for i in range(splits)]
     print("------------------- Final Results ------------------")
     print(f"The average accuracy of KNNForest is {regular}")
     print(f"The average accuracy of ImprovedKNNForest is {improved}")
