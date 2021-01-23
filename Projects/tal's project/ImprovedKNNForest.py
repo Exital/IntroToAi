@@ -230,16 +230,16 @@ def kfold_experiment(X, y, iterations=5):
     improved = sum(improved_accuracy) / len(improved_accuracy)
     improvement = improved - regular
     iterations = [i for i in range(iterations)]
+    print("------------------- Final Results ------------------")
+    print(f"The average accuracy of KNNForest is {regular}")
+    print(f"The average accuracy of ImprovedKNNForest is {improved}")
+    print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
     plt.xlabel("Fold number")
     plt.ylabel("Accuracy of that fold")
     plt.plot(iterations, accuracy, label="KNNForest")
     plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
     plt.show()
-    print("------------------- Final Results ------------------")
-    print(f"The average accuracy of KNNForest is {regular}")
-    print(f"The average accuracy of ImprovedKNNForest is {improved}")
-    print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
     return improvement, improved, regular
 
 
@@ -263,16 +263,16 @@ def iteration_experiment(x_train, y_train, x_test, y_test, iterations=25):
     improved = sum(improved_accuracy) / len(improved_accuracy)
     improvement = improved - regular
     iterations = [i for i in range(iterations)]
+    print("------------------- Final Results ------------------")
+    print(f"The average accuracy of KNNForest is {regular}")
+    print(f"The average accuracy of ImprovedKNNForest is {improved}")
+    print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
     plt.xlabel("Iteration number")
     plt.ylabel("Accuracy of that iteration")
     plt.plot(iterations, accuracy, label="KNNForest")
     plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
     plt.show()
-    print("------------------- Final Results ------------------")
-    print(f"The average accuracy of KNNForest is {regular}")
-    print(f"The average accuracy of ImprovedKNNForest is {improved}")
-    print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
     return improvement, improved, regular
 
 

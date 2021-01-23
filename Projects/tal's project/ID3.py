@@ -276,12 +276,12 @@ def experiment(X=None, y=None, m_values=None, splits=5):
         avg = sum(kfold_accuracy) / len(kfold_accuracy)
         accuracies.append(avg)
         print(f"M={m}, accuracy={avg}")
-    graphPlotAndShow(m_values, accuracies, "M value", "Accuracy")
     zipped = list(zip(m_values, accuracies))
     zipped.sort(key=lambda x: x[1], reverse=True)
-    best_k = zipped[0]
+    best_m = zipped[0]
     print(f"--------------------- Kfold cross validation results --------------\n"
-          f"Best M={best_k[0]} with accuracy={best_k[1]}")
+          f"Best M={best_m[0]} with accuracy={best_m[1]}")
+    graphPlotAndShow(m_values, accuracies, "M value", "Accuracy")
 
 
 if __name__ == "__main__":

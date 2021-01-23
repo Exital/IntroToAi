@@ -145,12 +145,12 @@ def experiment(X=None, y=None, test_size=None, splits=5):
         avg = sum(kfold_loss) / len(kfold_loss)
         losses.append(avg)
         print(f"size={size}, loss={avg}")
-    graphPlotAndShow(test_size, losses, "test size", "loss")
     zipped = list(zip(test_size, losses))
     zipped.sort(key=lambda x: x[1])
     best_size = zipped[0]
     print(f"----------------- Kfold cross validation results ------------------\n"
           f"Best size is={best_size[0]} with loss={best_size[1]}")
+    graphPlotAndShow(test_size, losses, "test size", "loss")
 
 
 if __name__ == "__main__":
