@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from numpy import log2
 
 DEFAULT_CLASSIFICATION = "M"
-# weights for the features were explored with the function "compute_feature_importance" from ID3.py
+# weights for the features were explored with the function "compute_feature_importance" from ImprovedKNNForest.py
 WEIGHTS = [('radius_mean', 0.0), ('texture_mean', 0.0), ('perimeter_mean', 0.0), ('area_mean', 0.0),
            ('smoothness_mean', 0.12534059945504047), ('compactness_mean', 0.0), ('concavity_mean', 0.0),
            ('concave points_mean', 0.0), ('symmetry_mean', 0.12534059945504047), ('fractal_dimension_mean', 0.0),
