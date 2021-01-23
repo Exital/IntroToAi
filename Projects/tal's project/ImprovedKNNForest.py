@@ -9,7 +9,16 @@ import numpy as np
 from math import e
 
 
-def remove_bad_features(x, features: list):
+def remove_feature(x, features: list):
+    """
+    This function removes a column of the dataset
+    :param x: the dataset
+    :type x: dataframe
+    :param features: list of features to remove
+    :type features: list
+    :return: a copy of the dataframe without the features.
+    :rtype: dataframe
+    """
     sub_data = x.copy()
     for feature in features:
         sub_data = sub_data.drop(feature, axis=1)
@@ -34,13 +43,32 @@ def scalar(series, mean, deviation):
 
 
 def get_weight(feature):
+    """
+    Gets the weight of a feature from the global weights that I computed earlier
+    :param feature: the feature name
+    :type feature: str
+    :return: a weight
+    :rtype: float
+    """
     for f, w in WEIGHTS:
         if f == feature:
             return w
-    raise ValueError("No such feature so no weight!")
+        else:
+            return 0
 
 
 def distance(v1, v2, weighted=False):
+    """
+    computes euclidean distance, can be weighted or not.
+    :param v1: series 1
+    :type v1: series
+    :param v2: series 2
+    :type v2: series
+    :param weighted: True for weighted
+    :type weighted: bool
+    :return: distance between the series
+    :rtype: float
+    """
     if not weighted:
         return np.linalg.norm(v1 - v2)
     else:
@@ -59,17 +87,18 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
     """
     This is a classifier that uses the regular KNNForestClassifier but normalizes the data before it uses it.
     """
-    def __init__(self, N=25, k=11):
+    def __init__(self, N=25, k=11, p=None):
         self.scaling_consts = []
         self.test_size = 0.33
         self.bad_features = []
         self.prob_range = 0.3, 0.32
         self.N = N
         self.k = k
+        self.p = p
         self.forest = []
         self.centroids = []
 
-    def fit_scaling(self, x, y):
+    def fit_scaling(self, x):
         """
         The scaling that has to be done with fitting + saves the values for the prediction fitting.
         :param x: the data
@@ -77,15 +106,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         :return: a normalized dataframe
         :rtype: dataframe
         """
-        # find features to remove
-        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=self.test_size)
-        # self.bad_features = []
-        # self.bad_features = find_best_features_to_remove(X_train, y_train, X_test, y_test)
-        # removing selected features
-        # subset_data = remove_bad_features(x, self.bad_features)
-        # clearing the scaling consts if there is another fit for newer data
         self.scaling_consts = []
-        # scaling with std scaling
         features = x.keys().tolist()
         x_scaled = x.copy()
         for feature in features:
@@ -105,9 +126,6 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         :return: a normalized dataframe
         :rtype: dataframe
         """
-        # removing selected features
-        # subset_data = remove_bad_features(x, self.bad_features)
-        # scaling with std scaling
         x_scaled = x.copy()
         for feature, mean_val, std_val in self.scaling_consts:
             x_scaled[feature] = scalar(x_scaled[feature], mean_val, std_val)
@@ -121,14 +139,17 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         :param y: the labels of that data
         :type y: dataframe
         """
-        scaled_x = self.fit_scaling(x, y)
+        scaled_x = self.fit_scaling(x)
         scaled_x = scaled_x
         self.forest = []
         self.centroids = []
         n = len(scaled_x.index)
         for i in range(self.N):
-            start, stop = self.prob_range
-            portion = random.uniform(start, stop)
+            if self.p is None:
+                start, stop = self.prob_range
+                portion = random.uniform(start, stop)
+            else:
+                portion = self.p
             test_size = 1 - ((n * portion) / n)
             X_train, X_test, y_train, y_test = train_test_split(scaled_x, y, test_size=test_size)
             train_data = X_train.copy()
@@ -157,7 +178,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         for row in range(len(data.index)):
             distances = []
             sample = data.iloc[[row]].copy()
-            sample = remove_bad_features(sample, ["diagnosis"])
+            sample = remove_feature(sample, ["diagnosis"])
             sample = sample.mean(axis=0)
             for tree, centroid in zip(self.forest, self.centroids):
                 dist = distance(centroid, sample, weighted=True)
@@ -172,10 +193,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
                     sick += e ** -dist
                 else:
                     healthy += e ** -dist
-            if sick >= healthy:
-                prediction = "M"
-            else:
-                prediction = "B"
+            prediction = "M" if sick >= healthy else "B"
             if prediction == data["diagnosis"].iloc[row]:
                 right_predictions += 1
             else:
@@ -188,11 +206,11 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         return acc, loss
 
 
-def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
+def kfold_experiment(X, y, iterations=5, verbose=False):
     accuracy = []
     improved_accuracy = []
-    classifier = KNNForestClassifier(N=N, k=k)
-    improved_classifier = ImprovedKNNForestClassifier(N=N, k=k)
+    classifier = KNNForestClassifier()
+    improved_classifier = ImprovedKNNForestClassifier()
     if verbose:
         print(f"----------- Starting new experiment -----------")
     kf = KFold(n_splits=iterations, random_state=307965806, shuffle=True)
@@ -229,7 +247,7 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=False):
     return improvement, improved, regular
 
 
-def improvement_experiment(x_train, y_train, x_test, y_test, iterations=25, verbose=False):
+def iteration_experiment(x_train, y_train, x_test, y_test, iterations=25, verbose=False):
     if verbose:
         print(f"----------- Starting experiment with {iterations} iterations -----------")
     classifier = KNNForestClassifier()
@@ -322,17 +340,70 @@ def compute_feature_importance(X, y, splits=5, verbose=False):
     max_weight = sorted_weights[0]
     max_error = max_weight[1]
     normalized_weights = [(feature, error / max_error) for feature, error in weights]
-    if args.verbose:
+    if verbose:
         print("------------ Feature's weights -------------")
         print(normalized_weights)
     return normalized_weights
+
+
+def find_hyperparameters_for_forest(X, y, splits=5, n_values=None, k_values=None, p_values=None):
+    # assign default test values
+    if n_values is None:
+        n_values = [x for x in range(3, 40)]
+    if k_values is None:
+        k_values = [x for x in range(1,30)]
+    if p_values is None:
+        p_values = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8]
+
+    best_hypers = []
+    best_acc = float('-inf')
+    print(f"---------------- starting a test to find hyper params -------------------")
+    print(f"N values={n_values}")
+    print(f"k values={k_values}")
+    print(f"p values={p_values}")
+    for n in n_values:
+        for k in k_values:
+            if k >= n:
+                break
+            for p in p_values:
+                accuracies = []
+                classifier = ImprovedKNNForestClassifier(N=n, k=k, p=p)
+                kf = KFold(n_splits=splits, random_state=307965806, shuffle=True)
+                for train_index, test_index in kf.split(X):
+                    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+                    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+
+                    classifier.fit(X_train, y_train)
+                    accuracy, _ = classifier.predict(X_test, y_test)
+
+                    accuracies.append(accuracy)
+                avg = sum(accuracies) / len(accuracies)
+                print(f"N={n}, k={k}, p={p}: accuracy={avg}")
+                if avg == best_acc:
+                    value = (n, k, p)
+                    best_hypers.append(value)
+                if avg > best_acc:
+                    best_hypers = []
+                    value = (n, k, p)
+                    best_hypers.append(value)
+                    best_acc = avg
+    print(f"------------ test results -------------")
+    print(f"The best hyper params are {best_hypers} with accuracy of {best_acc}")
 
 
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '-verbose', dest="verbose", action='store_true', help="Show more information")
-    parser.add_argument('-feature_weights', dest="feature_weights", action='store_true', help="Show more information")
+    parser.add_argument('-feature_weights', dest="feature_weights",
+                        action='store_true', help="Running a test to determine feature's weights")
+    parser.add_argument('-kfold_experiment', dest="kfold_experiment",
+                        action='store_true', help="Running a kfold test to show improvement")
+    parser.add_argument('-iteration_experiment', dest="iteration_experiment",
+                        action='store_true', help="Running an iteration test to show improvement")
+    parser.add_argument('-find_hyper', dest="find_hyper",
+                        action='store_true', help="Running kfold test to find hyper params")
+
     args = parser.parse_args()
 
     # retrieving the data from the csv files
@@ -341,12 +412,16 @@ if __name__ == "__main__":
 
     # Todo - in order to compute feature weights run ImprovedKNNForest.py with -feature_weights flag.
     if args.feature_weights:
-        train_x, train_y = csv2xy("train.csv")
         weights = compute_feature_importance(train_x, train_y, verbose=True)
 
-    # experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
+    # Todo - in order to run a kfold experiment to see improvement run ImprovedKNNForest.py with -kfold_experiment flag.
+    if args.kfold_experiment:
+        kfold_experiment(train_x, train_y, verbose=True, iterations=5)
 
-    while True:
-        imp, _, _ = improvement_experiment(train_x, train_y, test_x, test_y, iterations=5, verbose=args.verbose)
-        if imp > 0.015:
-            break
+    # Todo - to run an iteration experiment to see improvement run ImprovedKNNForest.py with -iteration_experiment flag.
+    if args.iteration_experiment:
+        iteration_experiment(train_x, train_y, test_x, test_y, verbose=True, iterations=5)
+
+    # Todo - to run a kfold experiment to find hyper params run ImprovedKNNForest.py with -find_hyper flag.
+    if args.find_hyper:
+        find_hyperparameters_for_forest(train_x, train_y, splits=5)

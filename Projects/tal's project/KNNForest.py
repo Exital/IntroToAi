@@ -74,11 +74,14 @@ if __name__ == "__main__":
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
     # creating a classifier instance
-    classifier = KNNForestClassifier(N=20, k=7)
+    classifier = KNNForestClassifier()
     # fitting the classifier
     classifier.fit(train_x, train_y)
     # predicting on the test data set
     accuracy, loss = classifier.predict(test_x, test_y)
-    print(accuracy)
+
     if args.verbose:
-        print(f"loss is {loss}")
+        print(f"The accuracy for KNNForest={accuracy}")
+        print(f"The loss for KNNForest={loss}")
+    else:
+        print(accuracy)
