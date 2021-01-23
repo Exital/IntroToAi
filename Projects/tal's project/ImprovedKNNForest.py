@@ -316,6 +316,7 @@ def compute_feature_importance(X, y, splits=5, verbose=False):
     """
     weights = []
     features = X.keys().tolist()
+    print(f"---------------- starting features weights computation ---------------")
     for feature in features:
         errors = []
         kf = KFold(n_splits=splits, random_state=307965806, shuffle=True)
