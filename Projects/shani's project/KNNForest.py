@@ -43,6 +43,7 @@ def get_centroid(data):
 
     return centroid
 
+
 def distance_between_vectors(v1, v2):
     """
     this function get 2 vectors and return euclidean distance between them
@@ -85,7 +86,6 @@ class KNNForestClassifier:
         self.centroids = []
         self.forest = []
         # Training group size
-        n = len(x.index)
         for i in range(self.N):
             fraction = random.uniform(self.first, self.last)
             sliced_x, sliced_y = slice_data(x, y, fraction)

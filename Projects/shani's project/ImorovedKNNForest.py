@@ -1,47 +1,47 @@
-from ID3 import build_id3_tree, ID3Classifier
+from ID3 import build_id3_tree, ID3Classifier, get_data_from_csv
 from sklearn.model_selection import train_test_split
 import random
-from KNNForest import slice_data, get_centroid
+from CostSensitiveID3 import tour_tree
+from KNNForest import slice_data, get_centroid, distance_between_vectors, KNNForestClassifier
 from sklearn.model_selection import KFold
 import random
 import numpy as np
+from math import pi
+
 
 class ImprovedKNNForestClassifier:# to get something?
     """
 
     """
-    def __init__(self, N=10, k=1):
+    def __init__(self, N=25, k=11):
         self.forest = []
         self.centroids = []
         self.N = N
         self.k = k
-        self.first = 0.6
+        self.first = 0.3
         self.last = 0.7
         self.size_test = 0.33
         self.normalization_values = []
 
-    def normalization_rang(self, x, y):  # fit_scaling
+    def normalization_rang(self, x):  # fit_scaling
         """
 
         :param x:
-        :param y:
         :return:
         """
-
-        train_x, test_x, train_y, test_y = train_test_split(x, y, size_test=self.size_test)
         self.normalization_values = []
         features = x.keys().tolist()
         normalize_x = x.copy()
         for feature in features:
-            min_val = min(set(normalize_x), key=normalize_x[feature])
-            max_val = max(set(normalize_x), key=normalize_x[feature])
-            data_list = normalize_x[feature].items()
+            min_val = min(set(normalize_x[feature]))
+            max_val = max(set(normalize_x[feature]))
+            data_col = normalize_x[feature]
             predict_value = feature, min_val, max_val
 
             self.normalization_values.append(predict_value)
-            for index, val in data_list:
-                data_list.loc[index] = (val - min_val) / (max_val - min_val)
-            normalize_x[feature] = data_list
+            for index, val in data_col.items():
+                data_col.loc[index] = (val - min_val) / (max_val - min_val)
+            normalize_x[feature] = data_col
 
         return normalize_x
 
@@ -53,8 +53,8 @@ class ImprovedKNNForestClassifier:# to get something?
         """
         normalize_x = x.copy()
         for feature, min_val, max_val in self.normalization_values:
-            data_list = normalize_x[feature].items()
-            for index, val in data_list:
+            data_list = normalize_x[feature]
+            for index, val in data_list.items():
                 data_list.loc[index] = (val - min_val) / (max_val - min_val)
             normalize_x[feature] = data_list
 
@@ -67,16 +67,13 @@ class ImprovedKNNForestClassifier:# to get something?
         :param y:
         :return:
         """
-        normalize_x = self.normalization_values(x, y)
-        # normalize_x = normalize_x
-
+        normalize_x = self.normalization_rang(x)
         self.centroids = []
         self.forest = []
         # Training group size
-        n = len(normalize_x.index)
         for i in range(self.N):  # to check if self.N or param in function
             fraction = random.uniform(self.first, self.last)
-            sliced_x, sliced_y = slice_data(x, y, fraction)
+            sliced_x, sliced_y = slice_data(normalize_x, y, fraction)
             sliced_x["diagnosis"] = sliced_y
             tree_node = build_id3_tree(sliced_x)
             self.forest.append(tree_node)
@@ -90,8 +87,8 @@ class ImprovedKNNForestClassifier:# to get something?
         :param y:
         :return:
         """
-
-        centroid_check = x.copy()
+        val_data = self.predict_normalization(x)
+        centroid_check = val_data.copy()
         centroid_check = centroid_check.mean(axis=0)
         all_dist = []
         for i_centroid, i_tree in zip(self.centroids, self.forest):
@@ -99,20 +96,22 @@ class ImprovedKNNForestClassifier:# to get something?
             val = i_tree, val_destination
             all_dist.append(val)
         all_dist.sort(key=lambda x: x[1])
-        list_al_dist =[]
+        list_al_dist = []
         for i in range(self.k):
             list_al_dist.append(all_dist[i])
-        val_data = x.copy()
         val_data["diagnosis"] = y
         correct_predict = 0
         # check each row in data
         for cur_row in range(len(val_data.index)):
-            results_predicts = []
-            for i_tree, _ in all_dist:
+            m_dist = 0
+            b_dist = 0
+            for i_tree, dist in all_dist:
                 pred_to_add = tour_tree(i_tree, cur_row, val_data)
-                results_predicts.append(pred_to_add)
-
-            max_val = max(set(results_predicts), key=results_predicts.count) # to check if can change
+                if pred_to_add == "M":
+                    m_dist += pi ** -dist
+                else:
+                    b_dist += pi ** -dist
+            max_val = "M" if m_dist >= b_dist else "B"
             val_data_r = val_data["diagnosis"].iloc[cur_row]
             if max_val == val_data_r:
                 correct_predict += 1
@@ -120,7 +119,7 @@ class ImprovedKNNForestClassifier:# to get something?
         accuracy = correct_predict / len(val_data.index)
         return accuracy
 
-    def calculate_significance_features(x, y, splits=5):
+    def calculate_significance_features(self, x, y, splits=5):
         """
 
         :param y:
@@ -152,3 +151,16 @@ class ImprovedKNNForestClassifier:# to get something?
             w = f, avg_m
             weights.append(w)
         return weights
+
+
+if __name__ == "__main__":
+    x_train, y_train = get_data_from_csv("train.csv")
+    x_test, y_test = get_data_from_csv("test.csv")
+    classifier = KNNForestClassifier()
+    classifier.fit(x_train, y_train)
+    acc = classifier.predict(x_test, y_test)
+    print(acc)
+    classifier = ImprovedKNNForestClassifier()
+    classifier.fit(x_train, y_train)
+    acc = classifier.predict(x_test, y_test)
+    print(acc)
