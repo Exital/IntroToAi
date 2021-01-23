@@ -86,7 +86,7 @@ class KNNForestClassifier:
         self.forest = []
         # Training group size
         n = len(x.index)
-        for i in range(self.N):  # to check if self.N or param in function
+        for i in range(self.N):
             fraction = random.uniform(self.first, self.last)
             sliced_x, sliced_y = slice_data(x, y, fraction)
             sliced_x["diagnosis"] = sliced_y
@@ -101,7 +101,7 @@ class KNNForestClassifier:
         centroid_check = x.copy()
         centroid_check = centroid_check.mean(axis=0)
         all_dist = []
-        for i_centroid, i_tree in zip(self.centroids ,self.forest):
+        for i_centroid, i_tree in zip(self.centroids, self.forest):
             val_destination = distance_between_vectors(i_centroid, centroid_check)
             val = i_tree, val_destination
             all_dist.append(val)

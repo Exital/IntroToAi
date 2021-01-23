@@ -1,0 +1,196 @@
+<html>
+<head>
+<title>CostSensitiveID3.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #0033b3;}
+.s1 { color: #080808;}
+.s2 { color: #8c8c8c; font-style: italic;}
+.s3 { color: #1750eb;}
+.s4 { color: #008080; font-weight: bold;}
+.s5 { color: #0037a6;}
+</style>
+</head>
+<body bgcolor="#ffffff">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#c0c0c0" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+CostSensitiveID3.py</font>
+</center></td></tr></table>
+<pre><span class="s0">from </span><span class="s1">ID3 </span><span class="s0">import </span><span class="s1">ID3Node, ID3Classifier</span>
+<span class="s0">import </span><span class="s1">argparse</span>
+<span class="s0">from </span><span class="s1">utils </span><span class="s0">import </span><span class="s1">csv2xy, graphPlotAndShow</span>
+<span class="s0">from </span><span class="s1">sklearn.model_selection </span><span class="s0">import </span><span class="s1">train_test_split</span>
+<span class="s0">from </span><span class="s1">sklearn.model_selection </span><span class="s0">import </span><span class="s1">KFold</span>
+
+
+<span class="s0">class </span><span class="s1">ID3CostSensitiveClassifier(ID3Classifier):</span>
+    <span class="s2">&quot;&quot;&quot; 
+    This classifier builds a regular ID3Tree and than pruning the nodes if it will improve loss costs. 
+    &quot;&quot;&quot;</span>
+    <span class="s0">def </span><span class="s1">__init__(self, cost_fn=</span><span class="s3">10</span><span class="s1">, cost_fp=</span><span class="s3">1</span><span class="s1">):</span>
+        <span class="s1">super().__init__()</span>
+        <span class="s1">self.validation = </span><span class="s0">None</span>
+        <span class="s1">self.cost_FN = cost_fn</span>
+        <span class="s1">self.cost_FP = cost_fp</span>
+
+    <span class="s0">def </span><span class="s1">fit(self, x, y, test_size=</span><span class="s3">0.6</span><span class="s1">):</span>
+        <span class="s2">&quot;&quot;&quot; 
+        Builds an ID3Tree and than prune it to improve costs 
+        :param x: dataset 
+        :type x: dataframe 
+        :param y: dataset 
+        :type y: dataframe 
+        :param test_size: the fraction for splitting 
+        :type test_size: float 
+        &quot;&quot;&quot;</span>
+        <span class="s1">X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size, random_state=</span><span class="s3">426</span><span class="s1">)</span>
+        <span class="s1">train_data = X_train.copy()</span>
+        <span class="s1">train_data[</span><span class="s4">&quot;diagnosis&quot;</span><span class="s1">] = y_train</span>
+        <span class="s1">validation_data = X_test.copy()</span>
+        <span class="s1">validation_data[</span><span class="s4">&quot;diagnosis&quot;</span><span class="s1">] = y_test</span>
+        <span class="s1">self.validation = validation_data</span>
+        <span class="s1">id3tree = ID3Node(data=train_data)</span>
+
+        <span class="s1">pruned_tree = self.prune(id3tree, self.validation)</span>
+        <span class="s1">self.id3tree = pruned_tree</span>
+
+    <span class="s0">def </span><span class="s1">prune(self, node: ID3Node, validation):</span>
+        <span class="s2">&quot;&quot;&quot; 
+        This is the function that is pruning the tree for better costs loss 
+        :param node: The tree to prune 
+        :type node: ID3Node 
+        :param validation: validation data to test on the node 
+        :type validation: dataframe 
+        :return: A pruned tree with better loss results 
+        :rtype: ID3Node 
+        &quot;&quot;&quot;</span>
+        <span class="s2"># if no validation data or node is leaf we return the same node</span>
+        <span class="s0">if </span><span class="s1">len(validation.index) == </span><span class="s3">0 </span><span class="s0">or </span><span class="s1">node.is_leaf():</span>
+            <span class="s0">return </span><span class="s1">node</span>
+
+        <span class="s2"># slicing the dataframe</span>
+        <span class="s1">validation_left = validation[validation[node.feature] &lt;= node.slicing_val]</span>
+        <span class="s1">validation_right = validation[validation[node.feature] &gt; node.slicing_val]</span>
+
+        <span class="s2"># recursively pruning the node's sons</span>
+        <span class="s1">node.left = self.prune(node.left, validation_left)</span>
+        <span class="s1">node.right = self.prune(node.right, validation_right)</span>
+
+        <span class="s2"># checking if its better to prune that node or not with cost in mind</span>
+        <span class="s1">err_prune, err_no_prune = </span><span class="s3">0</span><span class="s1">, </span><span class="s3">0</span>
+        <span class="s1">prune_diagnostic = self.decide_leaf_diagnosis_by_costs(validation)</span>
+        <span class="s0">for </span><span class="s1">row </span><span class="s0">in </span><span class="s1">range(len(validation.index)):</span>
+            <span class="s1">prediction = self.walk_the_tree(node, row, validation)</span>
+            <span class="s1">real_truth = validation[</span><span class="s4">&quot;diagnosis&quot;</span><span class="s1">].iloc[row]</span>
+            <span class="s1">err_prune += self.evaluate(real_truth, prune_diagnostic)</span>
+            <span class="s1">err_no_prune += self.evaluate(real_truth, prediction)</span>
+
+        <span class="s2"># it will be better to prune</span>
+        <span class="s0">if </span><span class="s1">err_prune &lt; err_no_prune:</span>
+            <span class="s1">node.data = </span><span class="s0">None</span>
+            <span class="s1">node.feature = </span><span class="s0">None</span>
+            <span class="s1">node.left = </span><span class="s0">None</span>
+            <span class="s1">node.right = </span><span class="s0">None</span>
+            <span class="s1">node.slicing_val = </span><span class="s0">None</span>
+            <span class="s1">node.diag = prune_diagnostic</span>
+        <span class="s0">return </span><span class="s1">node</span>
+
+    <span class="s0">def </span><span class="s1">evaluate(self, real_truth, predicted_truth):</span>
+        <span class="s2">&quot;&quot;&quot; 
+        evaluates the loss for the prediction of that node. 
+        :param real_truth: the diagnosis of the node 
+        :type real_truth: str 
+        :param predicted_truth: the ID3Tree prediction of that node 
+        :type predicted_truth: str 
+        :return: the cost of that prediction 
+        :rtype: int 
+        &quot;&quot;&quot;</span>
+        <span class="s0">if </span><span class="s1">real_truth != predicted_truth:</span>
+            <span class="s0">return </span><span class="s1">self.cost_FN </span><span class="s0">if </span><span class="s1">real_truth == </span><span class="s4">&quot;M&quot; </span><span class="s0">else </span><span class="s1">self.cost_FP</span>
+        <span class="s0">else</span><span class="s1">:</span>
+            <span class="s0">return </span><span class="s3">0</span>
+
+    <span class="s0">def </span><span class="s1">decide_leaf_diagnosis_by_costs(self, validation):</span>
+        <span class="s2">&quot;&quot;&quot; 
+        This function decides whats best diagnosis to give to a pruned node by the cost of it. 
+        :param validation: the validation data of the node being checked 
+        :type validation: dataframe 
+        :return: the node diagnosis 
+        :rtype: str 
+        &quot;&quot;&quot;</span>
+        <span class="s1">data = validation</span>
+        <span class="s1">count = data[</span><span class="s4">&quot;diagnosis&quot;</span><span class="s1">].value_counts()</span>
+        <span class="s1">m_count = count[</span><span class="s4">&quot;M&quot;</span><span class="s1">] </span><span class="s0">if </span><span class="s4">&quot;M&quot; </span><span class="s0">in </span><span class="s1">count.index </span><span class="s0">else </span><span class="s3">0</span>
+        <span class="s1">b_count = count[</span><span class="s4">&quot;B&quot;</span><span class="s1">] </span><span class="s0">if </span><span class="s4">&quot;B&quot; </span><span class="s0">in </span><span class="s1">count.index </span><span class="s0">else </span><span class="s3">0</span>
+
+        <span class="s0">return </span><span class="s4">&quot;M&quot; </span><span class="s0">if </span><span class="s1">b_count * self.cost_FP &lt; m_count * self.cost_FN </span><span class="s0">else </span><span class="s4">&quot;B&quot;</span>
+
+
+<span class="s0">def </span><span class="s1">experiment(X=</span><span class="s0">None</span><span class="s1">, y=</span><span class="s0">None</span><span class="s1">, test_size=</span><span class="s0">None</span><span class="s1">, verbose=</span><span class="s0">False</span><span class="s1">):</span>
+    <span class="s2">&quot;&quot;&quot; 
+    This function uses sklearn's kFold to cross validate and find the best 
+    size of split for costs sensitive 
+    The only parameter you need is to set verbose to True so you can see output. 
+    :param X: X dataset 
+    :type X: dataframe 
+    :param y: y dataset 
+    :type y: dataframe 
+    :param test_size: values to cross validate 
+    :type test_size: list 
+    :param verbose: True if you want to see graph and summary 
+    :type verbose: bool 
+    &quot;&quot;&quot;</span>
+    <span class="s0">if </span><span class="s1">X </span><span class="s0">is None or </span><span class="s1">y </span><span class="s0">is None</span><span class="s1">:</span>
+        <span class="s1">X, y = csv2xy(</span><span class="s4">&quot;train.csv&quot;</span><span class="s1">)</span>
+    <span class="s0">if </span><span class="s1">test_size </span><span class="s0">is None</span><span class="s1">:</span>
+        <span class="s1">test_size = [x/</span><span class="s3">100 </span><span class="s0">for </span><span class="s1">x </span><span class="s0">in </span><span class="s1">range(</span><span class="s3">1</span><span class="s1">, </span><span class="s3">99</span><span class="s1">)]</span>
+    <span class="s1">num_of_splits = </span><span class="s3">2</span>
+    <span class="s1">loss_per_split = []</span>
+    <span class="s1">kf = KFold(n_splits=num_of_splits, random_state=</span><span class="s3">307965806</span><span class="s1">, shuffle=</span><span class="s0">True</span><span class="s1">)</span>
+    <span class="s0">for </span><span class="s1">train_index, test_index </span><span class="s0">in </span><span class="s1">kf.split(X):</span>
+        <span class="s1">X_train, X_test = X.iloc[train_index], X.iloc[test_index]</span>
+        <span class="s1">y_train, y_test = y.iloc[train_index], y.iloc[test_index]</span>
+
+        <span class="s1">loss_per_size = []</span>
+        <span class="s0">for </span><span class="s1">size </span><span class="s0">in </span><span class="s1">test_size:</span>
+            <span class="s1">classifier = ID3CostSensitiveClassifier()</span>
+            <span class="s1">classifier.fit(X_train, y_train, size)</span>
+            <span class="s1">acc, loss = classifier.predict(X_test, y_test)</span>
+            <span class="s1">loss_per_size.append(loss)</span>
+        <span class="s1">loss_per_split.append(loss_per_size)</span>
+    <span class="s1">avg = [(sum(col)) / len(col) </span><span class="s0">for </span><span class="s1">col </span><span class="s0">in </span><span class="s1">zip(*loss_per_split)]</span>
+    <span class="s0">if </span><span class="s1">verbose:</span>
+        <span class="s1">graphPlotAndShow(test_size, avg, </span><span class="s4">&quot;test size&quot;</span><span class="s1">, </span><span class="s4">&quot;loss&quot;</span><span class="s1">)</span>
+        <span class="s1">zipped = list(zip(test_size, avg))</span>
+        <span class="s1">zipped.sort(key=</span><span class="s0">lambda </span><span class="s1">x: x[</span><span class="s3">1</span><span class="s1">])</span>
+        <span class="s1">best_size = zipped[</span><span class="s3">0</span><span class="s1">]</span>
+        <span class="s1">print(</span><span class="s4">f&quot;Kfold cross validation results:</span><span class="s5">\n</span><span class="s4">&quot;</span>
+              <span class="s4">f&quot;Best size is=</span><span class="s5">{</span><span class="s1">best_size[</span><span class="s3">0</span><span class="s1">]</span><span class="s5">} </span><span class="s4">with loss=</span><span class="s5">{</span><span class="s1">best_size[</span><span class="s3">1</span><span class="s1">]</span><span class="s5">}</span><span class="s4">&quot;</span><span class="s1">)</span>
+
+
+<span class="s0">if </span><span class="s1">__name__ == </span><span class="s4">&quot;__main__&quot;</span><span class="s1">:</span>
+
+    <span class="s1">parser = argparse.ArgumentParser()</span>
+    <span class="s1">parser.add_argument(</span><span class="s4">'-v'</span><span class="s1">, </span><span class="s4">'-verbose'</span><span class="s1">, dest=</span><span class="s4">&quot;verbose&quot;</span><span class="s1">, action=</span><span class="s4">'store_true'</span><span class="s1">, help=</span><span class="s4">&quot;Show more information&quot;</span><span class="s1">)</span>
+    <span class="s1">args = parser.parse_args()</span>
+
+    <span class="s2"># retrieving the data from the csv files</span>
+    <span class="s1">train_x, train_y = csv2xy(</span><span class="s4">&quot;train.csv&quot;</span><span class="s1">)</span>
+    <span class="s1">test_x, test_y = csv2xy(</span><span class="s4">&quot;test.csv&quot;</span><span class="s1">)</span>
+    <span class="s2"># creating a classifier instance</span>
+    <span class="s1">classifier = ID3CostSensitiveClassifier()</span>
+    <span class="s2"># fitting the classifier</span>
+    <span class="s1">classifier.fit(train_x, train_y)</span>
+    <span class="s2"># predicting on the test data set</span>
+    <span class="s1">accuracy, loss = classifier.predict(test_x, test_y)</span>
+    <span class="s0">if </span><span class="s1">args.verbose:</span>
+        <span class="s1">print(</span><span class="s4">f&quot;loss with cost optimizing=</span><span class="s5">{</span><span class="s1">loss</span><span class="s5">}</span><span class="s4">&quot;</span><span class="s1">)</span>
+    <span class="s0">else</span><span class="s1">:</span>
+        <span class="s1">print(loss)</span>
+
+    <span class="s2"># TODO in order to use the experiment uncomment and use -v flag or verbose = True.</span>
+    <span class="s2"># experiment(verbose=args.verbose)</span>
+</pre>
+</body>
+</html>
