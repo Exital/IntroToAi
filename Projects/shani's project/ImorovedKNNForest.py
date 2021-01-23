@@ -1,15 +1,14 @@
 from ID3 import build_id3_tree, ID3Classifier, get_data_from_csv
-from sklearn.model_selection import train_test_split
-import random
 from CostSensitiveID3 import tour_tree
 from KNNForest import slice_data, get_centroid, distance_between_vectors, KNNForestClassifier
 from sklearn.model_selection import KFold
 import random
 import numpy as np
 from math import pi
+WEIGHTS = []
 
 
-class ImprovedKNNForestClassifier:# to get something?
+class ImprovedKNNForestClassifier:
     """
 
     """
@@ -139,11 +138,11 @@ class ImprovedKNNForestClassifier:# to get something?
                 # calculate original accuracy
                 acc_first, _ = classifier.predict(test_x, test_y)
                 train_x_data = train_x.copy()
-                train_x_data[f] = np.random.train_x_data(train_x_data[f])
+                train_x_data[f] = np.random.permutation(train_x_data[f])
                 data_permute = train_x_data
                 classifier.fit(data_permute, train_y)
                 # calculate new accuracy
-                second_acc, _ =classifier.predict(test_x, test_y)
+                second_acc, _ = classifier.predict(test_x, test_y)
 
                 error = abs(acc_first - second_acc)
                 mistakes.append(error)
@@ -152,15 +151,25 @@ class ImprovedKNNForestClassifier:# to get something?
             weights.append(w)
         return weights
 
+    def weighted_distance(self, centroid1, centroid2):
+        distance = None
+        # -------- Your code -------
+        # Todo calculate euclidean distance with weights.
+        # Todo multiply each vector by it's weights and then use regular euclidean distance.
+        # --------------------------
+        return distance
+
 
 if __name__ == "__main__":
     x_train, y_train = get_data_from_csv("train.csv")
     x_test, y_test = get_data_from_csv("test.csv")
-    classifier = KNNForestClassifier()
-    classifier.fit(x_train, y_train)
-    acc = classifier.predict(x_test, y_test)
-    print(acc)
+    # classifier = KNNForestClassifier()
+    # classifier.fit(x_train, y_train)
+    # acc = classifier.predict(x_test, y_test)
+    # print(acc)
     classifier = ImprovedKNNForestClassifier()
-    classifier.fit(x_train, y_train)
-    acc = classifier.predict(x_test, y_test)
-    print(acc)
+    # classifier.fit(x_train, y_train)
+    # acc = classifier.predict(x_test, y_test)
+    # print(acc)
+    weights = classifier.calculate_significance_features(x_train, y_train)
+    print(weights)
