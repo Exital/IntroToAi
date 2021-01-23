@@ -405,7 +405,7 @@ if __name__ == "__main__":
 
     # Todo - in order to run a kfold experiment to see improvement run ImprovedKNNForest.py with -kfold_experiment flag.
     if args.kfold_experiment:
-        kfold_experiment(train_x, train_y, iterations=5)
+        kfold_experiment(train_x, train_y, splits=5)
 
     # Todo - to run an iteration experiment to see improvement run ImprovedKNNForest.py with -iteration_experiment flag.
     if args.iteration_experiment:
