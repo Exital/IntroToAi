@@ -5,7 +5,16 @@ from sklearn.model_selection import KFold
 import random
 import numpy as np
 from math import pi
-WEIGHTS = []
+WEIGHTS = [('radius_mean', 0.0), ('texture_mean', 0.0), ('perimeter_mean', 0.0), ('area_mean', 0.0),
+           ('smoothness_mean', 0.0), ('compactness_mean', 0.0), ('concavity_mean', 0.0026470588235294108),
+           ('concave points_mean', 0.0), ('symmetry_mean', 0.0), ('fractal_dimension_mean', 0.0), ('radius_se', 0.0),
+           ('texture_se', 0.0), ('perimeter_se', 0.0), ('area_se', 0.0), ('smoothness_se', 0.0),
+           ('compactness_se', 0.0), ('concavity_se', 0.005797101449275362),
+           ('concave points_se', 0.0002941176470588239), ('symmetry_se', 0.0), ('fractal_dimension_se', 0.0),
+           ('radius_worst', 0.0), ('texture_worst', 0.0005839727195225922), ('perimeter_worst', 0.01130861040068201),
+           ('area_worst', 0.0), ('smoothness_worst', 0.0), ('compactness_worst', 0.0),
+           ('concavity_worst', 0.00823529411764706), ('concave points_worst', 0.013989769820971864),
+           ('symmetry_worst', 0.0034782608695652175), ('fractal_dimension_worst', 0.002941176470588233)]
 
 
 class ImprovedKNNForestClassifier:
@@ -91,7 +100,7 @@ class ImprovedKNNForestClassifier:
         centroid_check = centroid_check.mean(axis=0)
         all_dist = []
         for i_centroid, i_tree in zip(self.centroids, self.forest):
-            val_destination = distance_between_vectors(i_centroid, centroid_check)
+            val_destination = self.weighted_distance(i_centroid, centroid_check)
             val = i_tree, val_destination
             all_dist.append(val)
         all_dist.sort(key=lambda x: x[1])
@@ -152,24 +161,89 @@ class ImprovedKNNForestClassifier:
         return weights
 
     def weighted_distance(self, centroid1, centroid2):
+        """
+        function to calculate euclidean distance with weights
+        :param centroid1:
+        :param centroid2:
+        :return:
+        """
         distance = None
-        # -------- Your code -------
-        # Todo calculate euclidean distance with weights.
-        # Todo multiply each vector by it's weights and then use regular euclidean distance.
-        # --------------------------
+        centroid1 = centroid1.copy()
+        centroid2 = centroid2.copy()
+        feature_found = False
+        for feature_key, val in centroid1.items():
+            weight_to_cal = 0
+            for feature_val, weight_val in WEIGHTS:
+                if feature_found is False and feature_val == feature_key:
+                    weight_to_cal = weight_val
+                    feature_found = True
+            if feature_found:
+                centroid1.loc[feature_key] = weight_to_cal * val
+            # else to check with tal
+        for feature_key, val in centroid2.items():
+            weight_to_cal = 0
+            for feature_val, weight_val in WEIGHTS:
+                if feature_found is False and feature_val == feature_key:
+                    weight_to_cal = weight_val
+                    feature_found = True
+            if feature_found:
+                centroid2.loc[feature_key] = weight_to_cal * val
+            # else to check with tal
+        distance = distance_between_vectors(centroid1, centroid2)
         return distance
 
+def experiment():
+    """
+
+    :param list1:
+    :param list2:
+    :return:
+    """
+    list1 =[]
+    for i in range(1, 10):
+        classifier = KNNForestClassifier()
+        classifier.fit(x_train, y_train)
+        acc = classifier.predict(x_test, y_test)
+        list1.append(acc)
+    avg = sum(list1) / len(list1)
+    print(avg)
+
+    print('after improved')
+
+    list2 = []
+    for i in range(1, 10):
+        classifier = ImprovedKNNForestClassifier()
+        classifier.fit(x_train, y_train)
+        list2 = []
+        acc = classifier.predict(x_test, y_test)
+        list2.append(acc)
+
+    avg = sum(list2) / 10
+    print(avg)
 
 if __name__ == "__main__":
     x_train, y_train = get_data_from_csv("train.csv")
     x_test, y_test = get_data_from_csv("test.csv")
-    # classifier = KNNForestClassifier()
-    # classifier.fit(x_train, y_train)
-    # acc = classifier.predict(x_test, y_test)
-    # print(acc)
-    classifier = ImprovedKNNForestClassifier()
-    # classifier.fit(x_train, y_train)
-    # acc = classifier.predict(x_test, y_test)
-    # print(acc)
-    weights = classifier.calculate_significance_features(x_train, y_train)
-    print(weights)
+    list1 =[]
+    for i in range(1, 10):
+        classifier = KNNForestClassifier()
+        classifier.fit(x_train, y_train)
+        acc = classifier.predict(x_test, y_test)
+        list1.append(acc)
+    avg = sum(list1) / len(list1)
+    print(avg)
+
+    print('after improved:')
+
+    list2 = []
+    for i in range(1, 10):
+        classifier = ImprovedKNNForestClassifier()
+        classifier.fit(x_train, y_train)
+        acc = classifier.predict(x_test, y_test)
+        list2.append(acc)
+
+    avg = sum(
+        list2) / 10
+    print(avg)
+    # weights = classifier.calculate_significance_features(x_train, y_train)
+    # print(weights)
