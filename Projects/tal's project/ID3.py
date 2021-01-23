@@ -239,7 +239,7 @@ class ID3PruneClassifier(ID3Classifier):
         self.id3tree = ID3PruningNode(data=data, m=self.pruning_value)
 
 
-def experiment(X=None, y=None, k_values=None, verbose=False):
+def experiment(X=None, y=None, m_values=None, splits=5):
     """
     This function uses sklearn's kFold to cross validate and find the best
     M value for the pruning.
@@ -252,33 +252,36 @@ def experiment(X=None, y=None, k_values=None, verbose=False):
     :type k_values: list
     :param verbose: True if you want to see graph and summary
     :type verbose: bool
+    :param splits: number of splits for the kfold
+    :type splits: int
     """
+    # setting up default params
     if X is None or y is None:
         X, y = csv2xy("train.csv")
-    if k_values is None:
-        k_values = [x for x in range(0, 25)]
-    num_of_splits = 5
-    acc_per_split = []
-    kf = KFold(n_splits=num_of_splits, random_state=307965806, shuffle=True)
-    for train_index, test_index in kf.split(X):
-        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-
-        acc_per_k = []
-        for k in k_values:
-            classifier = ID3PruneClassifier(pruning_value=k)
+    if m_values is None:
+        m_values = [x for x in range(0, 25)]
+    accuracies = []
+    print(f"----------------- starting experiment to determine M value -----------------")
+    print(f"M values={m_values}")
+    for m in m_values:
+        classifier = ID3PruneClassifier(pruning_value=m)
+        kf = KFold(n_splits=splits, random_state=307965806, shuffle=True)
+        kfold_accuracy = []
+        for train_index, test_index in kf.split(X):
+            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
             classifier.fit(X_train, y_train)
             acc, loss = classifier.predict(X_test, y_test)
-            acc_per_k.append(acc)
-        acc_per_split.append(acc_per_k)
-    avg = [(sum(col)) / len(col) for col in zip(*acc_per_split)]
-    if verbose:
-        graphPlotAndShow(k_values, avg, "M value", "Accuracy")
-        zipped = list(zip(k_values, avg))
-        zipped.sort(key=lambda x: x[1], reverse=True)
-        best_k = zipped[0]
-        print(f"Kfold cross validation results:\n"
-              f"Best M={best_k[0]} with accuracy={best_k[1]}")
+            kfold_accuracy.append(acc)
+        avg = sum(kfold_accuracy) / len(kfold_accuracy)
+        accuracies.append(avg)
+        print(f"M={m}, accuracy={avg}")
+    graphPlotAndShow(m_values, accuracies, "M value", "Accuracy")
+    zipped = list(zip(m_values, accuracies))
+    zipped.sort(key=lambda x: x[1], reverse=True)
+    best_k = zipped[0]
+    print(f"--------------------- Kfold cross validation results --------------\n"
+          f"Best M={best_k[0]} with accuracy={best_k[1]}")
 
 
 if __name__ == "__main__":
@@ -305,4 +308,4 @@ if __name__ == "__main__":
 
     # Todo - in order to run the experiment of finding the best M value run ID3.py with -find_m_value flag.
     if args.find_m_value:
-        experiment(verbose=True)
+        experiment()

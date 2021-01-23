@@ -1,4 +1,4 @@
-from utils import csv2xy, AbstractClassifier, beep, WEIGHTS
+from utils import csv2xy, AbstractClassifier, WEIGHTS
 import argparse
 import matplotlib.pyplot as plt
 from KNNForest import KNNForestClassifier
@@ -206,13 +206,12 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         return acc, loss
 
 
-def kfold_experiment(X, y, iterations=5, verbose=False):
+def kfold_experiment(X, y, iterations=5):
     accuracy = []
     improved_accuracy = []
     classifier = KNNForestClassifier()
     improved_classifier = ImprovedKNNForestClassifier()
-    if verbose:
-        print(f"----------- Starting new experiment -----------")
+    print(f"----------- Starting new experiment -----------")
     kf = KFold(n_splits=iterations, random_state=307965806, shuffle=True)
     for count, (train_index, test_index) in enumerate(kf.split(X)):
         X_train, X_test = X.iloc[train_index], X.iloc[test_index]
@@ -221,67 +220,59 @@ def kfold_experiment(X, y, iterations=5, verbose=False):
         classifier.fit(X_train, y_train)
         acc, loss = classifier.predict(X_test, y_test)
         accuracy.append(acc)
-        if verbose:
-            print(f"----------- Round {count + 1} -----------")
-            print(f"Accuracy for KNN={acc}")
+        print(f"----------- Round {count + 1} -----------")
+        print(f"Accuracy for KNN={acc}")
         improved_classifier.fit(X_train, y_train)
         acc, loss = improved_classifier.predict(X_test, y_test)
         improved_accuracy.append(acc)
-        if verbose:
-            print(f"Accuracy for ImprovedKNN={acc}")
+        print(f"Accuracy for ImprovedKNN={acc}")
     regular = sum(accuracy) / len(accuracy)
     improved = sum(improved_accuracy) / len(improved_accuracy)
     improvement = improved - regular
-    if verbose:
-        iterations = [i for i in range(iterations)]
-        plt.xlabel("Fold number")
-        plt.ylabel("Accuracy of that fold")
-        plt.plot(iterations, accuracy, label="KNNForest")
-        plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
-        plt.show()
-        print("------------------- Final Results ------------------")
-        print(f"The average accuracy of KNNForest is {regular}")
-        print(f"The average accuracy of ImprovedKNNForest is {improved}")
-        print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
+    iterations = [i for i in range(iterations)]
+    plt.xlabel("Fold number")
+    plt.ylabel("Accuracy of that fold")
+    plt.plot(iterations, accuracy, label="KNNForest")
+    plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+    plt.show()
+    print("------------------- Final Results ------------------")
+    print(f"The average accuracy of KNNForest is {regular}")
+    print(f"The average accuracy of ImprovedKNNForest is {improved}")
+    print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
     return improvement, improved, regular
 
 
-def iteration_experiment(x_train, y_train, x_test, y_test, iterations=25, verbose=False):
-    if verbose:
-        print(f"----------- Starting experiment with {iterations} iterations -----------")
+def iteration_experiment(x_train, y_train, x_test, y_test, iterations=25):
+    print(f"----------- Starting experiment with {iterations} iterations -----------")
     classifier = KNNForestClassifier()
     improved_classifier = ImprovedKNNForestClassifier()
     accuracy = []
     improved_accuracy = []
     for iter in range(iterations):
-        if verbose:
-            print(f"----------- Round {iter + 1} -----------")
+        print(f"----------- Round {iter + 1} -----------")
         classifier.fit(x_train, y_train)
         acc, _ = classifier.predict(x_test, y_test)
-        if verbose:
-            print(f"Accuracy for KNN={acc}")
+        print(f"Accuracy for KNN={acc}")
         improved_classifier.fit(x_train, y_train)
         improved_acc, _ = improved_classifier.predict(x_test, y_test)
-        if verbose:
-            print(f"Accuracy for ImprovedKNN={improved_acc}")
+        print(f"Accuracy for ImprovedKNN={improved_acc}")
         accuracy.append(acc)
         improved_accuracy.append(improved_acc)
     regular = sum(accuracy) / len(accuracy)
     improved = sum(improved_accuracy) / len(improved_accuracy)
     improvement = improved - regular
-    if verbose:
-        iterations = [i for i in range(iterations)]
-        plt.xlabel("Iteration number")
-        plt.ylabel("Accuracy of that iteration")
-        plt.plot(iterations, accuracy, label="KNNForest")
-        plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
-        plt.show()
-        print("------------------- Final Results ------------------")
-        print(f"The average accuracy of KNNForest is {regular}")
-        print(f"The average accuracy of ImprovedKNNForest is {improved}")
-        print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
+    iterations = [i for i in range(iterations)]
+    plt.xlabel("Iteration number")
+    plt.ylabel("Accuracy of that iteration")
+    plt.plot(iterations, accuracy, label="KNNForest")
+    plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+    plt.show()
+    print("------------------- Final Results ------------------")
+    print(f"The average accuracy of KNNForest is {regular}")
+    print(f"The average accuracy of ImprovedKNNForest is {improved}")
+    print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
     return improvement, improved, regular
 
 
@@ -300,7 +291,7 @@ def permute_feature(data, feature):
     return permutation
 
 
-def compute_feature_importance(X, y, splits=5, verbose=False):
+def compute_feature_importance(X, y, splits=5):
     """
     This function will use kfold cross validation in order to compute weights for the features.
     :param X: dataset
@@ -309,8 +300,6 @@ def compute_feature_importance(X, y, splits=5, verbose=False):
     :type y: datafram
     :param splits: number of splits for the kfold
     :type splits: int
-    :param verbose: printing outputs
-    :type verbose: bool
     :return: the weight list
     :rtype: list[Tuple]
     """
@@ -341,9 +330,8 @@ def compute_feature_importance(X, y, splits=5, verbose=False):
     max_weight = sorted_weights[0]
     max_error = max_weight[1]
     normalized_weights = [(feature, error / max_error) for feature, error in weights]
-    if verbose:
-        print("------------ Feature's weights -------------")
-        print(normalized_weights)
+    print("------------ Feature's weights -------------")
+    print(normalized_weights)
     return normalized_weights
 
 
@@ -413,15 +401,15 @@ if __name__ == "__main__":
 
     # Todo - in order to compute feature weights run ImprovedKNNForest.py with -feature_weights flag.
     if args.feature_weights:
-        weights = compute_feature_importance(train_x, train_y, verbose=True)
+        weights = compute_feature_importance(train_x, train_y)
 
     # Todo - in order to run a kfold experiment to see improvement run ImprovedKNNForest.py with -kfold_experiment flag.
     if args.kfold_experiment:
-        kfold_experiment(train_x, train_y, verbose=True, iterations=5)
+        kfold_experiment(train_x, train_y, iterations=5)
 
     # Todo - to run an iteration experiment to see improvement run ImprovedKNNForest.py with -iteration_experiment flag.
     if args.iteration_experiment:
-        iteration_experiment(train_x, train_y, test_x, test_y, verbose=True, iterations=5)
+        iteration_experiment(train_x, train_y, test_x, test_y, iterations=5)
 
     # Todo - to run a kfold experiment to find hyper params run ImprovedKNNForest.py with -find_hyper flag.
     if args.find_hyper:

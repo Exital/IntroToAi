@@ -108,7 +108,7 @@ class ID3CostSensitiveClassifier(ID3Classifier):
         return "M" if b_count * self.cost_FP < m_count * self.cost_FN else "B"
 
 
-def experiment(X=None, y=None, test_size=None, verbose=False):
+def experiment(X=None, y=None, test_size=None, splits=5):
     """
     This function uses sklearn's kFold to cross validate and find the best
     size of split for costs sensitive
@@ -121,33 +121,36 @@ def experiment(X=None, y=None, test_size=None, verbose=False):
     :type test_size: list
     :param verbose: True if you want to see graph and summary
     :type verbose: bool
+    :param splits: number of splits for kfold
+    :type splits: int
     """
+    # setting up default params
     if X is None or y is None:
         X, y = csv2xy("train.csv")
     if test_size is None:
         test_size = [x/100 for x in range(1, 99)]
-    num_of_splits = 2
-    loss_per_split = []
-    kf = KFold(n_splits=num_of_splits, random_state=307965806, shuffle=True)
-    for train_index, test_index in kf.split(X):
-        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-
-        loss_per_size = []
-        for size in test_size:
-            classifier = ID3CostSensitiveClassifier()
+    losses = []
+    print(f"------------------- starting validation size test --------------------")
+    print(f"test size={test_size}")
+    for size in test_size:
+        kfold_loss = []
+        classifier = ID3CostSensitiveClassifier()
+        kf = KFold(n_splits=splits, random_state=307965806, shuffle=True)
+        for train_index, test_index in kf.split(X):
+            X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+            y_train, y_test = y.iloc[train_index], y.iloc[test_index]
             classifier.fit(X_train, y_train, size)
             acc, loss = classifier.predict(X_test, y_test)
-            loss_per_size.append(loss)
-        loss_per_split.append(loss_per_size)
-    avg = [(sum(col)) / len(col) for col in zip(*loss_per_split)]
-    if verbose:
-        graphPlotAndShow(test_size, avg, "test size", "loss")
-        zipped = list(zip(test_size, avg))
-        zipped.sort(key=lambda x: x[1])
-        best_size = zipped[0]
-        print(f"Kfold cross validation results:\n"
-              f"Best size is={best_size[0]} with loss={best_size[1]}")
+            kfold_loss.append(loss)
+        avg = sum(kfold_loss) / len(kfold_loss)
+        losses.append(avg)
+        print(f"size={size}, loss={avg}")
+    graphPlotAndShow(test_size, losses, "test size", "loss")
+    zipped = list(zip(test_size, losses))
+    zipped.sort(key=lambda x: x[1])
+    best_size = zipped[0]
+    print(f"----------------- Kfold cross validation results ------------------\n"
+          f"Best size is={best_size[0]} with loss={best_size[1]}")
 
 
 if __name__ == "__main__":
@@ -176,4 +179,4 @@ if __name__ == "__main__":
 
     # Todo - in order to find the validation size run CostSensitiveID3.py with -find_validation_size flag.
     if args.find_validation_size:
-        experiment(verbose=True)
+        experiment()
