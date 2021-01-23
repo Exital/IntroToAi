@@ -2,7 +2,7 @@ from abc import ABC
 import pandas as pd
 import matplotlib.pyplot as plt
 from numpy import log2
-import winsound
+
 DEFAULT_CLASSIFICATION = "M"
 # weights for the features were explored with the function "compute_feature_importance" from ID3.py
 WEIGHTS = [('radius_mean', 0.0), ('texture_mean', 0.0), ('perimeter_mean', 0.0), ('area_mean', 0.0),
