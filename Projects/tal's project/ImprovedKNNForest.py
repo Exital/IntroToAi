@@ -53,8 +53,8 @@ def get_weight(feature):
     for f, w in WEIGHTS:
         if f == feature:
             return w
-        else:
-            return 0
+    # if the feature has no explored weight lets consider its full value
+    return 1
 
 
 def distance(v1, v2, weighted=False):
@@ -338,9 +338,9 @@ def compute_feature_importance(X, y, splits=5):
 def find_hyperparameters_for_forest(X, y, splits=5, n_values=None, k_values=None, p_values=None):
     # assign default test values
     if n_values is None:
-        n_values = [x for x in range(3, 40)]
+        n_values = [x for x in range(20, 30)]
     if k_values is None:
-        k_values = [x for x in range(1, 30)]
+        k_values = [x for x in range(7, 25, 2)]
     if p_values is None:
         p_values = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8]
 
@@ -376,6 +376,7 @@ def find_hyperparameters_for_forest(X, y, splits=5, n_values=None, k_values=None
                     value = (n, k, p)
                     best_hypers.append(value)
                     best_acc = avg
+        print(f"Best values for N={n} are {best_hypers} with accuracy={best_acc}")
     print(f"------------ test results -------------")
     print(f"The best hyper params are {best_hypers} with accuracy of {best_acc}")
 
