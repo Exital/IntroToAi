@@ -15,7 +15,7 @@ class ID3CostSensitiveClassifier(ID3Classifier):
         self.cost_FN = cost_fn
         self.cost_FP = cost_fp
 
-    def fit(self, x, y, test_size=0.58):
+    def fit(self, x, y, test_size=0.6):
         """
         Builds an ID3Tree and than prune it to improve costs
         :param x: dataset
@@ -119,8 +119,6 @@ def experiment(X=None, y=None, test_size=None, splits=5):
     :type y: dataframe
     :param test_size: values to cross validate
     :type test_size: list
-    :param verbose: True if you want to see graph and summary
-    :type verbose: bool
     :param splits: number of splits for kfold
     :type splits: int
     """
@@ -128,7 +126,7 @@ def experiment(X=None, y=None, test_size=None, splits=5):
     if X is None or y is None:
         X, y = csv2xy("train.csv")
     if test_size is None:
-        test_size = [x/100 for x in range(1, 99)]
+        test_size = [x/100 for x in range(1, 99, 3)]
     losses = []
     print(f"------------------- starting validation size test --------------------")
     print(f"test size={test_size}")
