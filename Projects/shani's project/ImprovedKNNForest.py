@@ -29,7 +29,7 @@ class ImprovedKNNForestClassifier:
         self.N = N
         self.k = k
         self.first = 0.3
-        self.last = 0.4
+        self.last = 0.31
         self.size_test = 0.33
         self.normalization_values = []
 
@@ -191,8 +191,8 @@ class ImprovedKNNForestClassifier:
 def experiment(X, y, iterations=5, N=20, k=7, verbose=True):
     accuracy = []
     improved_accuracy = []
-    classifier = KNNForestClassifier(N=N, k=k)
-    improved_classifier = ImprovedKNNForestClassifier(N=N, k=k)
+    classifier = KNNForestClassifier(N=15, k=7)
+    improved_classifier = ImprovedKNNForestClassifier(N=25, k=11)
     if verbose:
         print(f"----------- Starting new experiment -----------")
     kf = KFold(n_splits=iterations, random_state=204512396, shuffle=True)
