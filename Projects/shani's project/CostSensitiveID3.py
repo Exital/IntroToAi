@@ -27,9 +27,11 @@ def tour_tree(node: TreeNode, row, data):
 def check_leaf_and_groupValidation(node, group_validation):
     """
 
+    :param node:
     :param group_validation:
     :return:
     """
+
     if node.is_leaf() or len(group_validation.index) == 0:
         return True
     else:
@@ -163,6 +165,6 @@ if __name__ == "__main__":
     classifier.fit(train_x, train_y)
     # predict in test data set
     res_loss, res_accuracy = classifier.predict(test_x, test_y)
-    print(res_loss)
+    print(f"The loss value is {res_loss}")
 
 

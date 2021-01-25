@@ -141,3 +141,5 @@ if __name__ == "__main__":
     # predict in test data set
     res_accuracy = classifier.predict(test_x, test_y)
     print(res_accuracy)
+    # TODO print the Maximum accuracy value
+    # print(f"Maximum accuracy is {res_accuracy}")

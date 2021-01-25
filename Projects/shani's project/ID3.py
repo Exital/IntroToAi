@@ -5,8 +5,12 @@ import matplotlib.pyplot as plt
 DEFAULT_DIAGNOSIS = "M"
 
 
-
 def log(x):
+    """
+    Auxiliary function: function to calculate log_2 value
+    :param x: number
+    :return: the result of log_2(x)
+    """
     if x == 0:
         return 0
     else:
@@ -41,22 +45,24 @@ class TreeNode:
         self.left = None
         self.feature = None
         self.diag = None
-        self.threshold = None #slicing value
+        self.threshold = None
 
     def calculate_entropy(self, fraction):
         """
+        Auxiliary function: function to calculate entropy
         :param fraction: The fraction of the entropy
         :type fraction: float
         :return: The entropy
         :rtype: float
         """
+
         entropy_val = -fraction * log(fraction) - ((1-fraction) * log(1-fraction))
         return entropy_val
 
     def is_leaf(self):
         """
-        checks if that node is leaf
-        :return: True if leaf
+        function to check if that node is leaf
+        :return: True if leaf else False
         :rtype: bool
         """
         if self.diag is not None:
@@ -69,22 +75,22 @@ class TreeNode:
         checks what is the best threshold for feature and it's IG
         :param feature_name: The feature name to check
         :type feature_name: string
-        :return: (IG for the feature, threshold)
+        :return: (The best IG for the feature, threshold value)
         :rtype: tuple
         """
-        detection = self.data["diagnosis"]   # diagnosis
+        detection = self.data["diagnosis"]
         detection_list = detection.tolist()
-        val_feature = self.data[feature_name]  # values
+        val_feature = self.data[feature_name]
         val_feature_list = val_feature.tolist()
         # create the threshold's list
         threshold_list = self.cal_threshold_list(val_feature_list)
 
         ig_best_val = (float("-inf"), None)
         for divider in threshold_list:
-            size_biger, biger_posetive, size_smaller, smaller_positive = self.update_values(val_feature_list, detection_list, divider)
-
+            size_bigger, bigger_positive, size_smaller, smaller_positive = self.update_values(val_feature_list,
+                                                                                              detection_list, divider)
             # calculate root's IG
-            root_ig = smaller_positive + biger_posetive
+            root_ig = smaller_positive + bigger_positive
             size_val_feature = len(val_feature)
             fraction = root_ig/size_val_feature
             root_entropy = self.calculate_entropy(fraction)
@@ -93,17 +99,17 @@ class TreeNode:
             if size_smaller != 0:
                 fraction = smaller_positive / size_smaller
             else:
-                fraction = (biger_posetive+smaller_positive) / size_val_feature
+                fraction = (bigger_positive+smaller_positive) / size_val_feature
             left_entropy = self.calculate_entropy(fraction)
 
             # calculate right son's IG
-            if size_biger != 0:
-                fraction = biger_posetive / size_biger
+            if size_bigger != 0:
+                fraction = bigger_positive / size_bigger
             else:
-                fraction = (biger_posetive+smaller_positive)/size_val_feature
+                fraction = (bigger_positive+smaller_positive)/size_val_feature
             right_entropy = self.calculate_entropy(fraction)
 
-            ig_val = root_entropy - left_entropy * size_smaller / size_val_feature - (right_entropy*size_biger) / size_val_feature
+            ig_val = root_entropy - left_entropy * size_smaller / size_val_feature - (right_entropy*size_bigger) / size_val_feature
             if ig_val >= ig_best_val[0]:
                 ig_best_val = ig_val, divider
 
@@ -111,45 +117,43 @@ class TreeNode:
             raise ValueError("divider does not found")
         return ig_best_val
 
-
     def update_values(self ,val_feature, detection, divider):
         """
-        update values of size_biger, biger_posetive, size_smaller, smaller_positive
+        function to update values of size_bigger, bigger_positive, size_smaller, smaller_positive
         :param val_feature: The values of features
         :param detection: The data from diagnosis's column
         :param divider: divider from threshold_list
-        :return: size_biger, biger_posetive, size_smaller, smaller_positive
+        :return: size_bigger, bigger_positive, size_smaller, smaller_positive
         :rtype: tuple
         """
-        size_biger, biger_posetive, size_smaller, smaller_positive = 0, 0, 0, 0
+        size_bigger, bigger_positive, size_smaller, smaller_positive = 0, 0, 0, 0
         for i in range(len(val_feature)):
             if val_feature[i] <= divider:
                 size_smaller += 1
                 if detection[i] == "M":
                     smaller_positive += 1
             else:
-                size_biger += 1
+                size_bigger += 1
                 if detection[i] == "M":
-                    biger_posetive += 1
+                    bigger_positive += 1
 
-        return size_biger, biger_posetive, size_smaller, smaller_positive
+        return size_bigger, bigger_positive, size_smaller, smaller_positive
 
     def cal_threshold_list(self, val_feature_list):
         """
-        function to sum values of two sequential values
+        Auxiliary function: function to sum values of two sequential values
         :param val_feature_list: list of feature's values
         :return: list of the updated values
         :rtype: list
         """
-        soreted_values = sorted(val_feature_list, key=lambda x: x)
+        sorted_values = sorted(val_feature_list, key=lambda x: x)
         list_res = []
-        for i in range(len(soreted_values) - 1):
-            sum = soreted_values[i] + soreted_values[i+1]
+        for i in range(len(sorted_values) - 1):
+            sum = sorted_values[i] + sorted_values[i+1]
             res = sum / 2
             list_res.append(res)
 
         return list_res
-
 
     def choose_feature(self):
         """
@@ -207,7 +211,7 @@ def build_id3_tree(data: pd.DataFrame) -> TreeNode:
     else:
         # if check_leaf = false, means that this is not a leaf. therefore we update feature for slicing and slicing val
         node.feature, node.threshold = node.choose_feature()
-        #in this part we slice the dataframe
+        # in this part we slice the dataframe
         right_data = node.data[node.data[node.feature] > node.threshold]
         left_data = node.data[node.data[node.feature] <= node.threshold]
         # Recursive part to create to build the ID3 Tree
@@ -242,7 +246,7 @@ class ID3Classifier:
         :type x:Dataframe
         :param y: diagnosis
         :type y: Dataframe
-        :return: accuracy [0,1]
+        :return: accuracy value between [0,1]
         :rtype: float
         """
         def tour_tree(node: TreeNode, row):
@@ -294,7 +298,6 @@ def check_if_node_has_to_be_pruned(data_root, data_son, pruned_value):
     :return: if it has to be pruned return value is (True, diag), else (False, None)
     :rtype: tuple
     """
-
     detection = data_root["diagnosis"]  # diagnosis
     detection_list = detection.tolist()
     if len(data_son.index) < pruned_value:
@@ -322,9 +325,9 @@ def build_id3_tree_with_pruning(data, prune_value=8) -> TreeNode:
     :return: An id3 tree with pruning
     :rtype: TreeNode
     """
-
     def create_pruned_tree(tree, prune_value):
         """
+        builds a tree with pruned
         :param tree: tree value
         :param prune_value: prune value
         :return:
@@ -352,23 +355,39 @@ def build_id3_tree_with_pruning(data, prune_value=8) -> TreeNode:
     return create_pruned_tree(tree, prune_value)
 
 
-
-
 class TreeNodeWithPruneClassifier(ID3Classifier):
     """
-    todo this classifier is for prunning prediction
+    classifier for pruning prediction
     """
     def __init__(self, prune_value=8):
         super().__init__()
         self.m = prune_value
 
     def fit(self, x, y):
+        """
+        fits the classifier
+        :param x: data
+        :type x: Dataframe
+        :param y: diagnosis
+        :type y: Dataframe
+        """
         data = x.copy()
         data["diagnosis"] = y
         self.ID3TreeNode = build_id3_tree_with_pruning(data, self.m)
 
-
 def graph_demostrate_influence_accuracy(x_values, y_values, x_label="", y_label=""):
+    """
+    Auxiliary function: creates graph from data
+    :param x_values: values of x in a list
+    :type x_values: List
+    :param y_values: values of y in a list
+    :type y_values: List
+    :param x_label: label x axis
+    :type x_label: str
+    :param y_label: label y axis
+    :type y_label: str
+    :return: drawing a graph to see better the results
+    """
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.plot(x_values, y_values)
@@ -376,7 +395,15 @@ def graph_demostrate_influence_accuracy(x_values, y_values, x_label="", y_label=
 
 def experiment(x=None, y=None, m_values=None, graph=False):
     """
-
+    function to check what is the best M value for pruning by using sklearn's kFold
+    to cross validate
+    :param x: x dataset
+    :type x: Dataframe
+    :param y: y dataset
+    :type y: Dataframe
+    :param m_values: the values to cross validate
+    :type m_values: List
+    :param graph: A Boolean variable that indicates: True if we want to create a graph from the data
     """
     if x is None or y is None:
         x, y = get_data_from_csv("train.csv")
@@ -400,11 +427,13 @@ def experiment(x=None, y=None, m_values=None, graph=False):
         accuracy_split_values.append(accuracy_m_values)
     avg = [(sum(col)) / len(col) for col in zip(*accuracy_split_values)]
     if graph:
-        graph_demostrate_influence_accuracy(m_values, avg, "value of M", "Accuracy")
+        graph_demostrate_influence_accuracy(m_values, avg, "Value of M", "Accuracy")
         zipped = list(zip(m_values, avg))
         zipped.sort(key=lambda x: x[1], reverse=True)
         best_value_m = zipped[0]
-        print(f"Best M value is {best_value_m}")
+        print(f"Best M value is {best_value_m[0]}")
+        # printing to part 3.3
+        # print(f"Best M value is {best_value_m[0]} and the result is {best_value_m[1]}")
 
 
 if __name__ == "__main__":
@@ -418,22 +447,23 @@ if __name__ == "__main__":
     # predict in test data set
     res_loss, res_accuracy = classifier.predict(test_x, test_y)
     print(res_accuracy)
-    print(res_loss)
-
+    # print(f"ID3 Value is {res_accuracy}")
+    # TODO in order to see loss of ID3 value uncomment it
+    # print(res_loss)
+    # TODO in order to see prediction value, uncomment it
     # value_prediction = classifier.predict(test_x, test_y)
-    # print(value_prediction)
-
-    # TODO in order to use this function please uncomment it and use graph=True.
+    # print(value_prediction
+    # TODO: part 3.3 in order to use this function please uncomment it and use graph=True.
     # experiment(graph=True)
-
+    # TODO: results of accuracy for early pruned part 3.4 and 4.1
     # train_x, train_y = get_data_from_csv("train.csv")
     # test_x, test_y = get_data_from_csv("test.csv")
     #
-    # classifier = TreeNodeWithPruneClassifier(prune_value=150)
+    # classifier = TreeNodeWithPruneClassifier(prune_value=2)
     # classifier.fit(train_x, train_y)
     #
     # value_prediction = classifier.predict(test_x, test_y)
-    # print(value_prediction)
+    # print(f"ID3 and loss values of early pruning is {value_prediction}")
 
 
 

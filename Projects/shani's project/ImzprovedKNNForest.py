@@ -88,13 +88,8 @@ class ImprovedKNNForestClassifier:
             centroid = get_centroid(sliced_x)
             self.centroids.append(centroid)
 
-    def predict(self, x, y):  # TODO
-        """
+    def predict(self, x, y):
 
-        :param x:
-        :param y:
-        :return:
-        """
         val_data = self.predict_normalization(x)
         centroid_check = val_data.copy()
         centroid_check = centroid_check.mean(axis=0)
@@ -170,25 +165,18 @@ class ImprovedKNNForestClassifier:
         distance = None
         centroid1 = centroid1.copy()
         centroid2 = centroid2.copy()
-        feature_found = False
         for feature_key, val in centroid1.items():
-            weight_to_cal = 0
+            weight_to_cal = 1
             for feature_val, weight_val in WEIGHTS:
-                if feature_found is False and feature_val == feature_key:
+                if feature_val == feature_key:
                     weight_to_cal = weight_val
-                    feature_found = True
-            if feature_found:
                 centroid1.loc[feature_key] = weight_to_cal * val
-            # else to check with tal
         for feature_key, val in centroid2.items():
-            weight_to_cal = 0
+            weight_to_cal = 1
             for feature_val, weight_val in WEIGHTS:
-                if feature_found is False and feature_val == feature_key:
+                if feature_val == feature_key:
                     weight_to_cal = weight_val
-                    feature_found = True
-            if feature_found:
                 centroid2.loc[feature_key] = weight_to_cal * val
-            # else to check with tal
         distance = distance_between_vectors(centroid1, centroid2)
         return distance
 
@@ -200,32 +188,7 @@ def experiment():
     :return:
     """
     list1 =[]
-    for i in range(1, 10):
-        classifier = KNNForestClassifier()
-        classifier.fit(x_train, y_train)
-        acc = classifier.predict(x_test, y_test)
-        list1.append(acc)
-    avg = sum(list1) / len(list1)
-    print(avg)
-
-    print('after improved')
-
-    list2 = []
-    for i in range(1, 10):
-        classifier = ImprovedKNNForestClassifier()
-        classifier.fit(x_train, y_train)
-        list2 = []
-        acc = classifier.predict(x_test, y_test)
-        list2.append(acc)
-
-    avg = sum(list2) / 10
-    print(avg)
-
-if __name__ == "__main__":
-    x_train, y_train = get_data_from_csv("train.csv")
-    x_test, y_test = get_data_from_csv("test.csv")
-    list1 =[]
-    for i in range(1, 10):
+    for i in range(1, 12):
         classifier = KNNForestClassifier()
         classifier.fit(x_train, y_train)
         acc = classifier.predict(x_test, y_test)
@@ -236,14 +199,40 @@ if __name__ == "__main__":
     print('after improved:')
 
     list2 = []
-    for i in range(1, 10):
+    for i in range(1, 12):
         classifier = ImprovedKNNForestClassifier()
         classifier.fit(x_train, y_train)
         acc = classifier.predict(x_test, y_test)
         list2.append(acc)
 
-    avg = sum(
-        list2) / 10
+    avg = sum(list2) / len(list2)
     print(avg)
+if __name__ == "__main__":
+    x_train, y_train = get_data_from_csv("train.csv")
+    x_test, y_test = get_data_from_csv("test.csv")
+    # list1 = []
+    # while True:
+    #     classifier = KNNForestClassifier()
+    #     classifier.fit(x_train, y_train)
+    #     acc = classifier.predict(x_test, y_test)
+    #     # list1.append(acc)
+    #     if acc >= 0.99:
+    #         print('Yessss')
+    # avg = sum(list1) / len(list1)
+    # print(avg)
+    #
+    # print('after improved:')
+    #
+    # list2 = []
+    while True:
+        classifier = ImprovedKNNForestClassifier()
+        classifier.fit(x_train, y_train)
+        acc = classifier.predict(x_test, y_test)
+        # list2.append(acc)
+        if acc >= 0.99:
+            print('Yessss')
+
+    # avg = sum(list2) / len(list2)
+    # print(avg)
     # weights = classifier.calculate_significance_features(x_train, y_train)
     # print(weights)
