@@ -3,6 +3,8 @@ from CostSensitiveID3 import tour_tree
 from KNNForest import slice_data, get_centroid, distance_between_vectors, KNNForestClassifier
 from sklearn.model_selection import KFold
 import random
+import argparse
+import matplotlib.pyplot as plt
 import numpy as np
 from math import pi
 WEIGHTS = [('radius_mean', 0.0), ('texture_mean', 0.0), ('perimeter_mean', 0.0), ('area_mean', 0.0),
@@ -180,36 +182,89 @@ class ImprovedKNNForestClassifier:
         distance = distance_between_vectors(centroid1, centroid2)
         return distance
 
-def experiment():
-    """
 
-    :param list1:
-    :param list2:
-    :return:
-    """
-    list1 =[]
-    for i in range(1, 12):
-        classifier = KNNForestClassifier()
-        classifier.fit(x_train, y_train)
-        acc = classifier.predict(x_test, y_test)
-        list1.append(acc)
-    avg = sum(list1) / len(list1)
-    print(avg)
+def experiment(X, y, iterations=5, N=20, k=7, verbose=True):
+    accuracy = []
+    improved_accuracy = []
+    classifier = KNNForestClassifier(N=N, k=k)
+    improved_classifier = ImprovedKNNForestClassifier(N=N, k=k)
+    if verbose:
+        print(f"----------- Starting new experiment -----------")
+    kf = KFold(n_splits=iterations, random_state=204512396, shuffle=True)
+    for count, (train_index, test_index) in enumerate(kf.split(X)):
+        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
 
-    print('after improved:')
+        classifier.fit(X_train, y_train)
+        acc = classifier.predict(X_test, y_test)
+        accuracy.append(acc)
+        if verbose:
+            print(f"----------- Round {count + 1} -----------")
+            print(f"Accuracy for KNN={acc}")
+        improved_classifier.fit(X_train, y_train)
+        acc = improved_classifier.predict(X_test, y_test)
+        improved_accuracy.append(acc)
+        if verbose:
+            print(f"Accuracy for ImprovedKNN={acc}")
+    regular = sum(accuracy) / len(accuracy)
+    improved = sum(improved_accuracy) / len(improved_accuracy)
+    improvement = improved - regular
+    if verbose:
+        iterations = [i for i in range(iterations)]
+        plt.xlabel("Fold number")
+        plt.ylabel("Accuracy of that fold")
+        plt.plot(iterations, accuracy, label="KNNForest")
+        plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
+        plt.show()
+        print("------------------- Final Results ------------------")
+        print(f"The average accuracy of KNNForest is {regular}")
+        print(f"The average accuracy of ImprovedKNNForest is {improved}")
+        print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
+    return improvement, improved, regular
 
-    list2 = []
-    for i in range(1, 12):
-        classifier = ImprovedKNNForestClassifier()
-        classifier.fit(x_train, y_train)
-        acc = classifier.predict(x_test, y_test)
-        list2.append(acc)
+# def experiment222():
+#     """
+#
+#     :param list1:
+#     :param list2:
+#     :return:
+#     """
+#     list1 =[]
+#     for i in range(1, 12):
+#         classifier = KNNForestClassifier()
+#         classifier.fit(x_train, y_train)
+#         acc = classifier.predict(x_test, y_test)
+#         list1.append(acc)
+#     avg = sum(list1) / len(list1)
+#     print(avg)
+#
+#     print('after improved:')
+#
+#     list2 = []
+#     for i in range(1, 12):
+#         classifier = ImprovedKNNForestClassifier()
+#         classifier.fit(x_train, y_train)
+#         acc = classifier.predict(x_test, y_test)
+#         list2.append(acc)
+#
+#     avg = sum(list2) / len(list2)
+#     print(avg)
 
-    avg = sum(list2) / len(list2)
-    print(avg)
+
 if __name__ == "__main__":
-    x_train, y_train = get_data_from_csv("train.csv")
-    x_test, y_test = get_data_from_csv("test.csv")
+    # x_train, y_train = get_data_from_csv("train.csv")
+    # x_test, y_test = get_data_from_csv("test.csv")
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-v', '-verbose', dest="verbose", action='store_true', help="Show more information")
+    args = parser.parse_args()
+
+    train_x, train_y = get_data_from_csv("train.csv")
+    test_x, test_y = get_data_from_csv("test.csv")
+    kfold_x, kfold_y = get_data_from_csv("kfold.csv")
+    experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
+
+
     # list1 = []
     # while True:
     #     classifier = KNNForestClassifier()
@@ -224,13 +279,13 @@ if __name__ == "__main__":
     # print('after improved:')
     #
     # list2 = []
-    while True:
-        classifier = ImprovedKNNForestClassifier()
-        classifier.fit(x_train, y_train)
-        acc = classifier.predict(x_test, y_test)
-        # list2.append(acc)
-        if acc >= 0.99:
-            print('Yessss')
+    # while True:
+    #     classifier = ImprovedKNNForestClassifier()
+    #     classifier.fit(x_train, y_train)
+    #     acc = classifier.predict(x_test, y_test)
+    #     # list2.append(acc)
+    #     if acc >= 0.99:
+    #         print('Yessss')
 
     # avg = sum(list2) / len(list2)
     # print(avg)
