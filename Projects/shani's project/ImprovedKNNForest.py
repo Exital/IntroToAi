@@ -29,7 +29,7 @@ class ImprovedKNNForestClassifier:
         self.N = N
         self.k = k
         self.first = 0.3
-        self.last = 0.7
+        self.last = 0.4
         self.size_test = 0.33
         self.normalization_values = []
 
@@ -95,19 +95,24 @@ class ImprovedKNNForestClassifier:
         val_data = self.predict_normalization(x)
         centroid_check = val_data.copy()
         centroid_check = centroid_check.mean(axis=0)
-        all_dist = []
-        for i_centroid, i_tree in zip(self.centroids, self.forest):
-            val_destination = self.weighted_distance(i_centroid, centroid_check)
-            val = i_tree, val_destination
-            all_dist.append(val)
-        all_dist.sort(key=lambda x: x[1])
-        list_al_dist = []
-        for i in range(self.k):
-            list_al_dist.append(all_dist[i])
         val_data["diagnosis"] = y
         correct_predict = 0
         # check each row in data
         for cur_row in range(len(val_data.index)):
+            all_dist = []
+            exam = val_data.iloc[[cur_row]].copy()
+            copy_exam = exam.copy()
+            copy_exam = copy_exam.drop("diagnosis", axis=1)
+            update_data = copy_exam
+            update_data = update_data.mean(axis=0)
+            for i_centroid, i_tree in zip(self.centroids, self.forest):
+                val_destination = self.weighted_distance(i_centroid, update_data)
+                val = i_tree, val_destination
+                all_dist.append(val)
+            all_dist.sort(key=lambda x: x[1])
+            list_al_dist = []
+            for i in range(self.k):
+                list_al_dist.append(all_dist[i])
             m_dist = 0
             b_dist = 0
             for i_tree, dist in all_dist:
