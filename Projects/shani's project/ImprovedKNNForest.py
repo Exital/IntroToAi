@@ -226,34 +226,6 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=True):
         print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
     return improvement, improved, regular
 
-# def experiment222():
-#     """
-#
-#     :param list1:
-#     :param list2:
-#     :return:
-#     """
-#     list1 =[]
-#     for i in range(1, 12):
-#         classifier = KNNForestClassifier()
-#         classifier.fit(x_train, y_train)
-#         acc = classifier.predict(x_test, y_test)
-#         list1.append(acc)
-#     avg = sum(list1) / len(list1)
-#     print(avg)
-#
-#     print('after improved:')
-#
-#     list2 = []
-#     for i in range(1, 12):
-#         classifier = ImprovedKNNForestClassifier()
-#         classifier.fit(x_train, y_train)
-#         acc = classifier.predict(x_test, y_test)
-#         list2.append(acc)
-#
-#     avg = sum(list2) / len(list2)
-#     print(avg)
-
 
 if __name__ == "__main__":
     # x_train, y_train = get_data_from_csv("train.csv")
@@ -264,33 +236,6 @@ if __name__ == "__main__":
 
     train_x, train_y = get_data_from_csv("train.csv")
     test_x, test_y = get_data_from_csv("test.csv")
-    #kfold_x, kfold_y = get_data_from_csv("kfold.csv")
-    experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
+    kfold_x, kfold_y = get_data_from_csv("kfold.csv")
+    # experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
 
-
-    # list1 = []
-    # while True:
-    #     classifier = KNNForestClassifier()
-    #     classifier.fit(x_train, y_train)
-    #     acc = classifier.predict(x_test, y_test)
-    #     # list1.append(acc)
-    #     if acc >= 0.99:
-    #         print('Yessss')
-    # avg = sum(list1) / len(list1)
-    # print(avg)
-    #
-    # print('after improved:')
-    #
-    # list2 = []
-    # while True:
-    #     classifier = ImprovedKNNForestClassifier()
-    #     classifier.fit(x_train, y_train)
-    #     acc = classifier.predict(x_test, y_test)
-    #     # list2.append(acc)
-    #     if acc >= 0.99:
-    #         print('Yessss')
-
-    # avg = sum(list2) / len(list2)
-    # print(avg)
-    # weights = classifier.calculate_significance_features(x_train, y_train)
-    # print(weights)
