@@ -3,42 +3,10 @@ from CostSensitiveID3 import tour_tree
 from KNNForest import slice_data, get_centroid, distance_between_vectors, KNNForestClassifier
 from sklearn.model_selection import KFold
 import random
-import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 from math import pi
-WEIGHTS = [('radius_mean', 0.0), ('texture_mean', 0.0), ('perimeter_mean', 0.0), ('area_mean', 0.0),
-           ('smoothness_mean', 0.0), ('compactness_mean', 0.0), ('concavity_mean', 0.0026470588235294108),
-           ('concave points_mean', 0.0), ('symmetry_mean', 0.0), ('fractal_dimension_mean', 0.0), ('radius_se', 0.0),
-           ('texture_se', 0.0), ('perimeter_se', 0.0), ('area_se', 0.0), ('smoothness_se', 0.0),
-           ('compactness_se', 0.0), ('concavity_se', 0.005797101449275362),
-           ('concave points_se', 0.0002941176470588239), ('symmetry_se', 0.0), ('fractal_dimension_se', 0.0),
-           ('radius_worst', 0.0), ('texture_worst', 0.0005839727195225922), ('perimeter_worst', 0.01130861040068201),
-           ('area_worst', 0.0), ('smoothness_worst', 0.0), ('compactness_worst', 0.0),
-           ('concavity_worst', 0.00823529411764706), ('concave points_worst', 0.013989769820971864),
-           ('symmetry_worst', 0.0034782608695652175), ('fractal_dimension_worst', 0.002941176470588233)]
 
-
-def check_max_val(list_values):
-    """
-
-    :param list_values:
-    :return:
-    """
-    sum_M = 0
-    sum_B = 0
-    n = len(list_values)
-    for i in range(n):
-        temp = list_values[i]
-        if temp[0] == "M":
-            sum_M += temp[1]
-        else:
-            sum_B += temp[1]
-
-    calM_pi = pi ** -sum_M
-    calB_pi = pi ** -sum_B
-
-    return "M" if calM_pi > calB_pi else "B"
 
 class ImprovedKNNForestClassifier:
     """
@@ -53,13 +21,27 @@ class ImprovedKNNForestClassifier:
         self.last = 0.31
         self.size_test = 0.33
         self.normalization_values = []
+        self.weights = [('radius_mean', 0.0), ('texture_mean', 0.0), ('perimeter_mean', 0.0), ('area_mean', 0.0),
+           ('smoothness_mean', 0.0), ('compactness_mean', 0.0), ('concavity_mean', 0.0026470588235294108),
+           ('concave points_mean', 0.0), ('symmetry_mean', 0.0), ('fractal_dimension_mean', 0.0), ('radius_se', 0.0),
+           ('texture_se', 0.0), ('perimeter_se', 0.0), ('area_se', 0.0), ('smoothness_se', 0.0),
+           ('compactness_se', 0.0), ('concavity_se', 0.005797101449275362),
+           ('concave points_se', 0.0002941176470588239), ('symmetry_se', 0.0), ('fractal_dimension_se', 0.0),
+           ('radius_worst', 0.0), ('texture_worst', 0.0005839727195225922), ('perimeter_worst', 0.01130861040068201),
+           ('area_worst', 0.0), ('smoothness_worst', 0.0), ('compactness_worst', 0.0),
+           ('concavity_worst', 0.00823529411764706), ('concave points_worst', 0.013989769820971864),
+           ('symmetry_worst', 0.0034782608695652175), ('fractal_dimension_worst', 0.002941176470588233)]
 
-    def normalization_rang(self, x):  # fit_scaling to fit
+    def fit(self, x, y):
         """
 
         :param x:
+        :param y:
         :return:
         """
+        # minmax normalization
+        self.centroids = []
+        self.forest = []
         self.normalization_values = []
         features = x.keys().tolist()
         normalize_x = x.copy()
@@ -73,34 +55,6 @@ class ImprovedKNNForestClassifier:
             for index, val in data_col.items():
                 data_col.loc[index] = (val - min_val) / (max_val - min_val)
             normalize_x[feature] = data_col
-
-        return normalize_x
-
-    def predict_normalization(self, x):  # predict_scaling to predict
-        """
-
-        :param x:
-        :return:
-        """
-        normalize_x = x.copy()
-        for feature, min_val, max_val in self.normalization_values:
-            data_list = normalize_x[feature]
-            for index, val in data_list.items():
-                data_list.loc[index] = (val - min_val) / (max_val - min_val)
-            normalize_x[feature] = data_list
-
-        return normalize_x
-
-    def fit(self, x, y):
-        """
-
-        :param x:
-        :param y:
-        :return:
-        """
-        normalize_x = self.normalization_rang(x)
-        self.centroids = []
-        self.forest = []
         # Training group size
         for i in range(self.N):  # to check if self.N or param in function
             fraction = random.uniform(self.first, self.last)
@@ -111,9 +65,16 @@ class ImprovedKNNForestClassifier:
             centroid = get_centroid(sliced_x)
             self.centroids.append(centroid)
 
-    def predict(self, x, y):  # TODO
-
-        val_data = self.predict_normalization(x)
+    def predict(self, x, y):
+        # minmax - normalization
+        normalize_x = x.copy()
+        for feature, min_val, max_val in self.normalization_values:
+            data_list = normalize_x[feature]
+            for index, val in data_list.items():
+                data_list.loc[index] = (val - min_val) / (max_val - min_val)
+            normalize_x[feature] = data_list
+        # using the normalized data
+        val_data = normalize_x
         val_data["diagnosis"] = y
         correct_predict = 0
         # check each row in data
@@ -134,18 +95,13 @@ class ImprovedKNNForestClassifier:
                 list_al_dist.append(all_dist[i])
             m_dist = 0
             b_dist = 0
-            list_values = []
             for i_tree, dist in all_dist:
                 pred_to_add = tour_tree(i_tree, cur_row, val_data)
-                val_to_add = (pred_to_add, dist)
-                list_values.append(val_to_add)
-
-            #     if pred_to_add == "M":
-            #         m_dist += pi ** -dist
-            #     else:
-            #         b_dist += pi ** -dist
-            # max_val = "M" if m_dist > b_dist else "B"  # use functions
-            max_val = check_max_val(list_values)
+                if pred_to_add == "M":
+                    m_dist += 1 / pi ** -dist
+                else:
+                    b_dist += 1 / pi ** -dist
+            max_val = "M" if m_dist > b_dist else "B"
             val_data_r = val_data["diagnosis"].iloc[cur_row]
             if max_val == val_data_r:
                 correct_predict += 1
@@ -193,18 +149,17 @@ class ImprovedKNNForestClassifier:
         :param centroid2:
         :return:
         """
-        distance = None
         centroid1 = centroid1.copy()
         centroid2 = centroid2.copy()
         for feature_key, val in centroid1.items():
             weight_to_cal = 1
-            for feature_val, weight_val in WEIGHTS:
+            for feature_val, weight_val in self.weights:
                 if feature_val == feature_key:
                     weight_to_cal = weight_val
             centroid1.loc[feature_key] = weight_to_cal * val
         for feature_key, val in centroid2.items():
             weight_to_cal = 1
-            for feature_val, weight_val in WEIGHTS:
+            for feature_val, weight_val in self.weights:
                 if feature_val == feature_key:
                     weight_to_cal = weight_val
             centroid2.loc[feature_key] = weight_to_cal * val
@@ -254,14 +209,9 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=True):
 
 
 if __name__ == "__main__":
-    # x_train, y_train = get_data_from_csv("train.csv")
-    # x_test, y_test = get_data_from_csv("test.csv")
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-v', '-verbose', dest="verbose", action='store_true', help="Show more information")
-    args = parser.parse_args()
 
     train_x, train_y = get_data_from_csv("train.csv")
     test_x, test_y = get_data_from_csv("test.csv")
     kfold_x, kfold_y = get_data_from_csv("kfold.csv")
-    # experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
+    experiment(train_x, train_y, verbose=True, N=15, k=9, iterations=5)
 
