@@ -3,7 +3,6 @@ from CostSensitiveID3 import tour_tree
 from KNNForest import slice_data, get_centroid, distance_between_vectors, KNNForestClassifier
 from sklearn.model_selection import KFold
 import random
-import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 from math import pi
@@ -33,12 +32,16 @@ class ImprovedKNNForestClassifier:
            ('concavity_worst', 0.00823529411764706), ('concave points_worst', 0.013989769820971864),
            ('symmetry_worst', 0.0034782608695652175), ('fractal_dimension_worst', 0.002941176470588233)]
 
-    def normalization_rang(self, x):  # fit_scaling
+    def fit(self, x, y):
         """
 
         :param x:
+        :param y:
         :return:
         """
+        # minmax normalization
+        self.centroids = []
+        self.forest = []
         self.normalization_values = []
         features = x.keys().tolist()
         normalize_x = x.copy()
@@ -52,34 +55,6 @@ class ImprovedKNNForestClassifier:
             for index, val in data_col.items():
                 data_col.loc[index] = (val - min_val) / (max_val - min_val)
             normalize_x[feature] = data_col
-
-        return normalize_x
-
-    def predict_normalization(self, x):  # predict_scaling
-        """
-
-        :param x:
-        :return:
-        """
-        normalize_x = x.copy()
-        for feature, min_val, max_val in self.normalization_values:
-            data_list = normalize_x[feature]
-            for index, val in data_list.items():
-                data_list.loc[index] = (val - min_val) / (max_val - min_val)
-            normalize_x[feature] = data_list
-
-        return normalize_x
-
-    def fit(self, x, y):
-        """
-
-        :param x:
-        :param y:
-        :return:
-        """
-        normalize_x = self.normalization_rang(x)
-        self.centroids = []
-        self.forest = []
         # Training group size
         for i in range(self.N):  # to check if self.N or param in function
             fraction = random.uniform(self.first, self.last)
@@ -90,9 +65,16 @@ class ImprovedKNNForestClassifier:
             centroid = get_centroid(sliced_x)
             self.centroids.append(centroid)
 
-    def predict(self, x, y):  # TODO
-
-        val_data = self.predict_normalization(x)
+    def predict(self, x, y):
+        # minmax - normalization
+        normalize_x = x.copy()
+        for feature, min_val, max_val in self.normalization_values:
+            data_list = normalize_x[feature]
+            for index, val in data_list.items():
+                data_list.loc[index] = (val - min_val) / (max_val - min_val)
+            normalize_x[feature] = data_list
+        # using the normalized data
+        val_data = normalize_x
         val_data["diagnosis"] = y
         correct_predict = 0
         # check each row in data
@@ -167,7 +149,6 @@ class ImprovedKNNForestClassifier:
         :param centroid2:
         :return:
         """
-        distance = None
         centroid1 = centroid1.copy()
         centroid2 = centroid2.copy()
         for feature_key, val in centroid1.items():
@@ -228,14 +209,9 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=True):
 
 
 if __name__ == "__main__":
-    # x_train, y_train = get_data_from_csv("train.csv")
-    # x_test, y_test = get_data_from_csv("test.csv")
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-v', '-verbose', dest="verbose", action='store_true', help="Show more information")
-    args = parser.parse_args()
 
     train_x, train_y = get_data_from_csv("train.csv")
     test_x, test_y = get_data_from_csv("test.csv")
     kfold_x, kfold_y = get_data_from_csv("kfold.csv")
-    # experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
+    experiment(train_x, train_y, verbose=True, N=15, k=9, iterations=5)
 
