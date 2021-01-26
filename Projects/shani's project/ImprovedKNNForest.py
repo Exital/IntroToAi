@@ -19,6 +19,27 @@ WEIGHTS = [('radius_mean', 0.0), ('texture_mean', 0.0), ('perimeter_mean', 0.0),
            ('symmetry_worst', 0.0034782608695652175), ('fractal_dimension_worst', 0.002941176470588233)]
 
 
+def check_max_val(list_values):
+    """
+
+    :param list_values:
+    :return:
+    """
+    sum_M = 0
+    sum_B = 0
+    n = len(list_values)
+    for i in range(n):
+        temp = list_values[i]
+        if temp[0] == "M":
+            sum_M += temp[1]
+        else:
+            sum_B += temp[1]
+
+    calM_pi = pi ** -sum_M
+    calB_pi = pi ** -sum_B
+
+    return "M" if calM_pi > calB_pi else "B"
+
 class ImprovedKNNForestClassifier:
     """
 
@@ -33,7 +54,7 @@ class ImprovedKNNForestClassifier:
         self.size_test = 0.33
         self.normalization_values = []
 
-    def normalization_rang(self, x):  # fit_scaling
+    def normalization_rang(self, x):  # fit_scaling to fit
         """
 
         :param x:
@@ -55,7 +76,7 @@ class ImprovedKNNForestClassifier:
 
         return normalize_x
 
-    def predict_normalization(self, x):  # predict_scaling
+    def predict_normalization(self, x):  # predict_scaling to predict
         """
 
         :param x:
@@ -113,13 +134,18 @@ class ImprovedKNNForestClassifier:
                 list_al_dist.append(all_dist[i])
             m_dist = 0
             b_dist = 0
+            list_values = []
             for i_tree, dist in all_dist:
                 pred_to_add = tour_tree(i_tree, cur_row, val_data)
-                if pred_to_add == "M":
-                    m_dist += 1 / pi ** -dist
-                else:
-                    b_dist += 1 / pi ** -dist
-            max_val = "M" if m_dist > b_dist else "B"
+                val_to_add = (pred_to_add, dist)
+                list_values.append(val_to_add)
+
+            #     if pred_to_add == "M":
+            #         m_dist += pi ** -dist
+            #     else:
+            #         b_dist += pi ** -dist
+            # max_val = "M" if m_dist > b_dist else "B"  # use functions
+            max_val = check_max_val(list_values)
             val_data_r = val_data["diagnosis"].iloc[cur_row]
             if max_val == val_data_r:
                 correct_predict += 1
