@@ -7,16 +7,6 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 from math import pi
-WEIGHTS = [('radius_mean', 0.0), ('texture_mean', 0.0), ('perimeter_mean', 0.0), ('area_mean', 0.0),
-           ('smoothness_mean', 0.0), ('compactness_mean', 0.0), ('concavity_mean', 0.0026470588235294108),
-           ('concave points_mean', 0.0), ('symmetry_mean', 0.0), ('fractal_dimension_mean', 0.0), ('radius_se', 0.0),
-           ('texture_se', 0.0), ('perimeter_se', 0.0), ('area_se', 0.0), ('smoothness_se', 0.0),
-           ('compactness_se', 0.0), ('concavity_se', 0.005797101449275362),
-           ('concave points_se', 0.0002941176470588239), ('symmetry_se', 0.0), ('fractal_dimension_se', 0.0),
-           ('radius_worst', 0.0), ('texture_worst', 0.0005839727195225922), ('perimeter_worst', 0.01130861040068201),
-           ('area_worst', 0.0), ('smoothness_worst', 0.0), ('compactness_worst', 0.0),
-           ('concavity_worst', 0.00823529411764706), ('concave points_worst', 0.013989769820971864),
-           ('symmetry_worst', 0.0034782608695652175), ('fractal_dimension_worst', 0.002941176470588233)]
 
 
 class ImprovedKNNForestClassifier:
@@ -32,6 +22,16 @@ class ImprovedKNNForestClassifier:
         self.last = 0.31
         self.size_test = 0.33
         self.normalization_values = []
+        self.weights = [('radius_mean', 0.0), ('texture_mean', 0.0), ('perimeter_mean', 0.0), ('area_mean', 0.0),
+           ('smoothness_mean', 0.0), ('compactness_mean', 0.0), ('concavity_mean', 0.0026470588235294108),
+           ('concave points_mean', 0.0), ('symmetry_mean', 0.0), ('fractal_dimension_mean', 0.0), ('radius_se', 0.0),
+           ('texture_se', 0.0), ('perimeter_se', 0.0), ('area_se', 0.0), ('smoothness_se', 0.0),
+           ('compactness_se', 0.0), ('concavity_se', 0.005797101449275362),
+           ('concave points_se', 0.0002941176470588239), ('symmetry_se', 0.0), ('fractal_dimension_se', 0.0),
+           ('radius_worst', 0.0), ('texture_worst', 0.0005839727195225922), ('perimeter_worst', 0.01130861040068201),
+           ('area_worst', 0.0), ('smoothness_worst', 0.0), ('compactness_worst', 0.0),
+           ('concavity_worst', 0.00823529411764706), ('concave points_worst', 0.013989769820971864),
+           ('symmetry_worst', 0.0034782608695652175), ('fractal_dimension_worst', 0.002941176470588233)]
 
     def normalization_rang(self, x):  # fit_scaling
         """
@@ -172,13 +172,13 @@ class ImprovedKNNForestClassifier:
         centroid2 = centroid2.copy()
         for feature_key, val in centroid1.items():
             weight_to_cal = 1
-            for feature_val, weight_val in WEIGHTS:
+            for feature_val, weight_val in self.weights:
                 if feature_val == feature_key:
                     weight_to_cal = weight_val
             centroid1.loc[feature_key] = weight_to_cal * val
         for feature_key, val in centroid2.items():
             weight_to_cal = 1
-            for feature_val, weight_val in WEIGHTS:
+            for feature_val, weight_val in self.weights:
                 if feature_val == feature_key:
                     weight_to_cal = weight_val
             centroid2.loc[feature_key] = weight_to_cal * val
