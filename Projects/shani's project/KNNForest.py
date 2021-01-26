@@ -66,7 +66,7 @@ class KNNForestClassifier:
     """
     This is the classifier for the forest
     """
-    def __init__(self, N=20, k=13):
+    def __init__(self, N=15, k=7):
         self.forest = []
         self.centroids = []
         self.N = N
