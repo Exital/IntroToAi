@@ -8,6 +8,27 @@ import numpy as np
 from math import pi
 
 
+def check_max(list_values):
+    """
+
+    :param list_values:
+    :return:
+    """
+    sum_M = 0
+    sum_B = 0
+    n = len(list_values)
+    for i in range(n):
+        temp = list_values[i]
+        if temp[0] == "M":
+            sum_M += temp[1]
+        else:
+            sum_B += temp[1]
+    funM_pi = pi ** -sum_M
+    funB_pi = pi ** -sum_B
+    return "M" if funM_pi < funB_pi else "B"
+
+
+
 class ImprovedKNNForestClassifier:
     """
 
@@ -95,13 +116,18 @@ class ImprovedKNNForestClassifier:
                 list_al_dist.append(all_dist[i])
             m_dist = 0
             b_dist = 0
+            list_values = []
             for i_tree, dist in all_dist:
                 pred_to_add = tour_tree(i_tree, cur_row, val_data)
-                if pred_to_add == "M":
-                    m_dist += 1 / pi ** -dist
-                else:
-                    b_dist += 1 / pi ** -dist
-            max_val = "M" if m_dist > b_dist else "B"
+                val_to_add = (pred_to_add, dist)
+                list_values.append(val_to_add)
+                #
+                # if pred_to_add == "M":
+                #     m_dist += 1 / pi ** -dist
+                # else:
+                #     b_dist += 1 / pi ** -dist
+            # max_val = "M" if m_dist > b_dist else "B"
+            max_val = check_max(list_values)
             val_data_r = val_data["diagnosis"].iloc[cur_row]
             if max_val == val_data_r:
                 correct_predict += 1
@@ -174,16 +200,18 @@ def experiment(X, y, iterations=5, N=20, k=7, verbose=True):
     improved_classifier = ImprovedKNNForestClassifier(N=25, k=11)
     if verbose:
         print(f"----------- Starting new experiment -----------")
-    kf = KFold(n_splits=iterations, random_state=204512396, shuffle=True)
-    for count, (train_index, test_index) in enumerate(kf.split(X)):
-        X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-        y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-
+    # kf = KFold(n_splits=iterations, random_state=204512396, shuffle=True)
+    # for count, (train_index, test_index) in enumerate(kf.split(X)):
+    #     X_train, X_test = X.iloc[train_index], X.iloc[test_index]
+    #     y_train, y_test = y.iloc[train_index], y.iloc[test_index]
+    X_train, y_train = get_data_from_csv("train.csv")
+    X_test, y_test = get_data_from_csv("test.csv")
+    for i in range(5):
         classifier.fit(X_train, y_train)
         acc = classifier.predict(X_test, y_test)
         accuracy.append(acc)
         if verbose:
-            print(f"----------- Round {count + 1} -----------")
+            print(f"----------- Round {i + 1} -----------")
             print(f"Accuracy for KNN={acc}")
         improved_classifier.fit(X_train, y_train)
         acc = improved_classifier.predict(X_test, y_test)
@@ -215,3 +243,4 @@ if __name__ == "__main__":
     kfold_x, kfold_y = get_data_from_csv("kfold.csv")
     experiment(train_x, train_y, verbose=True, N=15, k=9, iterations=5)
 
+    # empty
