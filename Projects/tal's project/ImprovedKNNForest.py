@@ -89,8 +89,6 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
     """
     def __init__(self, N=25, k=11, p=None):
         self.scaling_consts = []
-        self.test_size = 0.33
-        self.bad_features = []
         self.prob_range = 0.3, 0.32
         self.N = N
         self.k = k
