@@ -93,8 +93,6 @@ class ImprovedKNNForestClassifier:
     def predict(self, x, y):  # TODO
 
         val_data = self.predict_normalization(x)
-        centroid_check = val_data.copy()
-        centroid_check = centroid_check.mean(axis=0)
         val_data["diagnosis"] = y
         correct_predict = 0
         # check each row in data
@@ -118,10 +116,10 @@ class ImprovedKNNForestClassifier:
             for i_tree, dist in all_dist:
                 pred_to_add = tour_tree(i_tree, cur_row, val_data)
                 if pred_to_add == "M":
-                    m_dist += pi ** -dist
+                    m_dist += 1 / pi ** -dist
                 else:
-                    b_dist += pi ** -dist
-            max_val = "M" if m_dist >= b_dist else "B"
+                    b_dist += 1 / pi ** -dist
+            max_val = "M" if m_dist > b_dist else "B"
             val_data_r = val_data["diagnosis"].iloc[cur_row]
             if max_val == val_data_r:
                 correct_predict += 1
@@ -177,13 +175,13 @@ class ImprovedKNNForestClassifier:
             for feature_val, weight_val in WEIGHTS:
                 if feature_val == feature_key:
                     weight_to_cal = weight_val
-                centroid1.loc[feature_key] = weight_to_cal * val
+            centroid1.loc[feature_key] = weight_to_cal * val
         for feature_key, val in centroid2.items():
             weight_to_cal = 1
             for feature_val, weight_val in WEIGHTS:
                 if feature_val == feature_key:
                     weight_to_cal = weight_val
-                centroid2.loc[feature_key] = weight_to_cal * val
+            centroid2.loc[feature_key] = weight_to_cal * val
         distance = distance_between_vectors(centroid1, centroid2)
         return distance
 
@@ -266,7 +264,7 @@ if __name__ == "__main__":
 
     train_x, train_y = get_data_from_csv("train.csv")
     test_x, test_y = get_data_from_csv("test.csv")
-    kfold_x, kfold_y = get_data_from_csv("kfold.csv")
+    #kfold_x, kfold_y = get_data_from_csv("kfold.csv")
     experiment(train_x, train_y, verbose=args.verbose, N=15, k=9, iterations=5)
 
 
