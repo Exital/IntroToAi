@@ -38,12 +38,11 @@ class KNNForestClassifier(AbstractClassifier):
     """
     def __init__(self, N=25, k=11, p=None):
         super().__init__()
-        self.p = p
         self.prob_range = 0.3, 0.7
         self.N = N
         self.k = k
+        self.p = p
         self.forest = []
-        self.centroids = []
 
     def split_data(self, x, y):
         """

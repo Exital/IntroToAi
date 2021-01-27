@@ -1,4 +1,4 @@
-from utils import csv2xy, WEIGHTS
+from utils import csv2xy
 import argparse
 import matplotlib.pyplot as plt
 from KNNForest import KNNForestClassifier, get_centroid
@@ -41,47 +41,6 @@ def scalar(series, mean, deviation):
     return series
 
 
-def get_weight(feature):
-    """
-    Gets the weight of a feature from the global weights that I computed earlier
-    :param feature: the feature name
-    :type feature: str
-    :return: a weight
-    :rtype: float
-    """
-    for f, w in WEIGHTS:
-        if f == feature:
-            return w
-    # if the feature has no explored weight lets consider its full value
-    return 1
-
-
-def distance(v1, v2, weighted=False):
-    """
-    computes euclidean distance, can be weighted or not.
-    :param v1: series 1
-    :type v1: series
-    :param v2: series 2
-    :type v2: series
-    :param weighted: True for weighted
-    :type weighted: bool
-    :return: distance between the series
-    :rtype: float
-    """
-    if not weighted:
-        return np.linalg.norm(v1 - v2)
-    else:
-        v1_weighted = v1.copy()
-        v2_weighted = v2.copy()
-        for index, value in v1_weighted.items():
-            weight = get_weight(index)
-            v1_weighted.loc[index] = value * weight
-        for index, value in v2_weighted.items():
-            weight = get_weight(index)
-            v2_weighted.loc[index] = value * weight
-        return np.linalg.norm(v1_weighted - v2_weighted)
-
-
 class ImprovedKNNForestClassifier(KNNForestClassifier):
     """
     This is a classifier that uses the regular KNNForestClassifier but normalizes the data before it uses it.
@@ -89,6 +48,48 @@ class ImprovedKNNForestClassifier(KNNForestClassifier):
     def __init__(self, N=25, k=11, p=0.3):
         super().__init__(N, k, p)
         self.scaling_consts = []
+        # weights for the features were explored by function "compute_feature_importance" from ImprovedKNNForest.py
+        self.weights = {'radius_mean': 0.0, 'texture_mean': 0.10117302052785897, 'perimeter_mean': 0.0,
+                        'area_mean': 0.0, 'smoothness_mean': 0.0, 'compactness_mean': 0.0, 'concavity_mean': 0.0,
+                        'concave points_mean': 0.0, 'symmetry_mean': 0.0, 'fractal_dimension_mean': 0.0,
+                        'radius_se': 0.0, 'texture_se': 0.0, 'perimeter_se': 0.0, 'area_se': 0.0, 'smoothness_se': 0.0,
+                        'compactness_se': 0.0, 'concavity_se': 0.0, 'concave points_se': 0.0, 'symmetry_se': 0.0,
+                        'fractal_dimension_se': 0.0, 'radius_worst': 0.0, 'texture_worst': 1.0,
+                        'perimeter_worst': 0.6041055718475081, 'area_worst': 0.1994134897360707,
+                        'smoothness_worst': 0.3020527859237537, 'compactness_worst': 0.0,
+                        'concavity_worst': 0.1994134897360707, 'concave points_worst': 0.9032258064516138,
+                        'symmetry_worst': 0.40175953079178944, 'fractal_dimension_worst': 0.1994134897360707}
+
+    def get_weight(self, feature):
+        if feature in self.weights:
+            return self.weights[feature]
+        else:
+            return 1
+
+    def distance(self, v1, v2, weighted=False):
+        """
+        computes euclidean distance, can be weighted or not.
+        :param v1: series 1
+        :type v1: series
+        :param v2: series 2
+        :type v2: series
+        :param weighted: True for weighted
+        :type weighted: bool
+        :return: distance between the series
+        :rtype: float
+        """
+        if not weighted:
+            return np.linalg.norm(v1 - v2)
+        else:
+            v1_weighted = v1.copy()
+            v2_weighted = v2.copy()
+            for index, value in v1_weighted.items():
+                weight = self.get_weight(index)
+                v1_weighted.loc[index] = value * weight
+            for index, value in v2_weighted.items():
+                weight = self.get_weight(index)
+                v2_weighted.loc[index] = value * weight
+            return np.linalg.norm(v1_weighted - v2_weighted)
 
     def fit_scaling(self, x):
         """
@@ -147,7 +148,7 @@ class ImprovedKNNForestClassifier(KNNForestClassifier):
         right_predictions, false_positive, false_negative = 0, 0, 0
         for row in range(len(data.index)):
             row_centroid = get_centroid(data.iloc[[row]].copy())
-            knn_trees = [(tree, distance(row_centroid, centroid, weighted=True)) for (tree, centroid) in self.forest]
+            knn_trees = [(tree, self.distance(row_centroid, centroid, weighted=True)) for (tree, centroid) in self.forest]
             knn_trees.sort(key=lambda val: val[1])
             knn_trees = knn_trees[:self.k]
             predictions = [(self.walk_the_tree(tree, row, data), e ** -dist) for (tree, dist) in knn_trees]
