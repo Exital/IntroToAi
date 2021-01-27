@@ -220,6 +220,7 @@ def build_id3_tree(data: pd.DataFrame) -> TreeNode:
 
     return node
 
+
 class ID3Classifier:
     """
     Classifier for id3 predicting
@@ -242,8 +243,8 @@ class ID3Classifier:
     def predict(self, x, y):
         """
         predicts new samples with the decision tree made by fit.
-        :param x: data without diagnosis
-        :type x:Dataframe
+        :param x: isolated data without diagnosis
+        :type x: Dataframe
         :param y: diagnosis
         :type y: Dataframe
         :return: accuracy value between [0,1]
@@ -375,6 +376,7 @@ class TreeNodeWithPruneClassifier(ID3Classifier):
         data["diagnosis"] = y
         self.ID3TreeNode = build_id3_tree_with_pruning(data, self.m)
 
+
 def graph_demostrate_influence_accuracy(x_values, y_values, x_label="", y_label=""):
     """
     Auxiliary function: creates graph from data
@@ -393,8 +395,10 @@ def graph_demostrate_influence_accuracy(x_values, y_values, x_label="", y_label=
     plt.plot(x_values, y_values)
     plt.show()
 
+
 def experiment(x=None, y=None, m_values=None, graph=False):
     """
+    # TODO in order to see accuracy value, please uncomment in main part the first "TODO"
     function to check what is the best M value for pruning by using sklearn's kFold
     to cross validate
     :param x: x dataset
@@ -428,42 +432,34 @@ def experiment(x=None, y=None, m_values=None, graph=False):
     avg = [(sum(col)) / len(col) for col in zip(*accuracy_split_values)]
     if graph:
         graph_demostrate_influence_accuracy(m_values, avg, "Value of M", "Accuracy")
-        zipped = list(zip(m_values, avg))
-        zipped.sort(key=lambda x: x[1], reverse=True)
-        best_value_m = zipped[0]
-        print(f"Best M value is {best_value_m[0]}")
+        # TODO in order to see best M value uncomment the next line
+        # zipped = list(zip(m_values, avg))
+        # zipped.sort(key=lambda x: x[1], reverse=True)
+        # best_value_m = zipped[0]
+        # print(f"Best M value is {best_value_m[0]}")
         # printing to part 3.3
         # print(f"Best M value is {best_value_m[0]} and the result is {best_value_m[1]}")
 
 
 if __name__ == "__main__":
-    # get tha data from csv files
+    # in the main part, first we get tha data from csv files, after that we create a ID3Classifier,
+    # then fit the classifier. in the end we predict in test data set and printing the ID3 accuracy
     train_x, train_y = get_data_from_csv("train.csv")
     test_x, test_y = get_data_from_csv("test.csv")
-    # create a ID3Classifier
     classifier = ID3Classifier()
-    # fit the classifier
     classifier.fit(train_x, train_y)
-    # predict in test data set
     res_loss, res_accuracy = classifier.predict(test_x, test_y)
     print(res_accuracy)
+    # TODO: part 3.3 in order to use this function please uncomment it and use graph=True.
+    # experiment(graph=True)
+
     # print(f"ID3 Value is {res_accuracy}")
     # TODO in order to see loss of ID3 value uncomment it
     # print(res_loss)
     # TODO in order to see prediction value, uncomment it
     # value_prediction = classifier.predict(test_x, test_y)
-    # print(value_prediction
-    # TODO: part 3.3 in order to use this function please uncomment it and use graph=True.
-    # experiment(graph=True)
-    # TODO: results of accuracy for early pruned part 3.4 and 4.1
-    # train_x, train_y = get_data_from_csv("train.csv")
-    # test_x, test_y = get_data_from_csv("test.csv")
-    #
-    # classifier = TreeNodeWithPruneClassifier(prune_value=2)
-    # classifier.fit(train_x, train_y)
-    #
-    # value_prediction = classifier.predict(test_x, test_y)
-    # print(f"ID3 and loss values of early pruning is {value_prediction}")
+    # print(value_prediction)
+
 
 
 

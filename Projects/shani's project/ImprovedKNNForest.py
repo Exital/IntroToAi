@@ -3,16 +3,16 @@ from CostSensitiveID3 import tour_tree
 from KNNForest import slice_data, get_centroid, distance_between_vectors, KNNForestClassifier
 from sklearn.model_selection import KFold
 import random
-import matplotlib.pyplot as plt
 import numpy as np
 from math import pi
 
 
 def check_max(list_values):
     """
-
-    :param list_values:
-    :return:
+    Auxiliary function: checks what is maximum between M and B distance values
+    use function pi^(-sum of dist) as a function decreases
+    :param list_values: list of tuples (prediction=M/B, distance value)
+    :return: M OR B
     """
     sum_M = 0
     sum_B = 0
@@ -28,10 +28,9 @@ def check_max(list_values):
     return "M" if funM_pi < funB_pi else "B"
 
 
-
 class ImprovedKNNForestClassifier:
     """
-
+    Classifier for improved KNN Forest
     """
     def __init__(self, N=25, k=11):
         self.forest = []
@@ -55,12 +54,14 @@ class ImprovedKNNForestClassifier:
 
     def fit(self, x, y):
         """
-
-        :param x:
-        :param y:
-        :return:
+        This function fits the classifier and creates a decision tree
+        also in this function doing normalization of MinMax in the data
+        :param x: data without diagnosis
+        :type x: Dataframe
+        :param y: diagnosis
+        :type y: Dataframe
         """
-        # minmax normalization
+        # MinMax normalization
         self.centroids = []
         self.forest = []
         self.normalization_values = []
@@ -71,13 +72,12 @@ class ImprovedKNNForestClassifier:
             max_val = max(set(normalize_x[feature]))
             data_col = normalize_x[feature]
             predict_value = feature, min_val, max_val
-
             self.normalization_values.append(predict_value)
             for index, val in data_col.items():
                 data_col.loc[index] = (val - min_val) / (max_val - min_val)
             normalize_x[feature] = data_col
         # Training group size
-        for i in range(self.N):  # to check if self.N or param in function
+        for i in range(self.N):
             fraction = random.uniform(self.first, self.last)
             sliced_x, sliced_y = slice_data(normalize_x, y, fraction)
             sliced_x["diagnosis"] = sliced_y
@@ -87,7 +87,14 @@ class ImprovedKNNForestClassifier:
             self.centroids.append(centroid)
 
     def predict(self, x, y):
-        # minmax - normalization
+        """
+        predicts new samples with the decision tree made by fit
+        means using the values that we normalized the fit data
+        :param x: isolated data without diagnosis, DataFrame
+        :param y: diagnosis
+        :return: accuracy value between [0,1], float number
+        """
+        # MinMax - normalization
         normalize_x = x.copy()
         for feature, min_val, max_val in self.normalization_values:
             data_list = normalize_x[feature]
@@ -114,19 +121,13 @@ class ImprovedKNNForestClassifier:
             list_al_dist = []
             for i in range(self.k):
                 list_al_dist.append(all_dist[i])
-            m_dist = 0
-            b_dist = 0
             list_values = []
+            list_dist = []
             for i_tree, dist in all_dist:
                 pred_to_add = tour_tree(i_tree, cur_row, val_data)
                 val_to_add = (pred_to_add, dist)
                 list_values.append(val_to_add)
-                #
-                # if pred_to_add == "M":
-                #     m_dist += 1 / pi ** -dist
-                # else:
-                #     b_dist += 1 / pi ** -dist
-            # max_val = "M" if m_dist > b_dist else "B"
+                list_dist.append(val_to_add[1])
             max_val = check_max(list_values)
             val_data_r = val_data["diagnosis"].iloc[cur_row]
             if max_val == val_data_r:
@@ -137,10 +138,11 @@ class ImprovedKNNForestClassifier:
 
     def calculate_significance_features(self, x, y, splits=5):
         """
-
-        :param y:
-        :param splits:
-        :return:
+        This function calculates the values of weights to evaluate each feature
+        :param x: isolated data without diagnosis, DataFrame
+        :param y: diagnosis
+        :param splits: number of splits
+        :return: The weights
         """
         weights = []
         features = x.keys().tolist()
@@ -160,7 +162,6 @@ class ImprovedKNNForestClassifier:
                 classifier.fit(data_permute, train_y)
                 # calculate new accuracy
                 second_acc, _ = classifier.predict(test_x, test_y)
-
                 error = abs(acc_first - second_acc)
                 mistakes.append(error)
             avg_m = sum(mistakes) / len(mistakes)
@@ -171,9 +172,9 @@ class ImprovedKNNForestClassifier:
     def weighted_distance(self, centroid1, centroid2):
         """
         function to calculate euclidean distance with weights
-        :param centroid1:
-        :param centroid2:
-        :return:
+        :param centroid1: first vector
+        :param centroid2: second vector
+        :return: euclidean distance with weights between the two vectors
         """
         centroid1 = centroid1.copy()
         centroid2 = centroid2.copy()
@@ -193,54 +194,12 @@ class ImprovedKNNForestClassifier:
         return distance
 
 
-def experiment(X, y, iterations=5, N=20, k=7, verbose=True):
-    accuracy = []
-    improved_accuracy = []
-    classifier = KNNForestClassifier(N=15, k=7)
-    improved_classifier = ImprovedKNNForestClassifier(N=25, k=11)
-    if verbose:
-        print(f"----------- Starting new experiment -----------")
-    # kf = KFold(n_splits=iterations, random_state=204512396, shuffle=True)
-    # for count, (train_index, test_index) in enumerate(kf.split(X)):
-    #     X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-    #     y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-    X_train, y_train = get_data_from_csv("train.csv")
-    X_test, y_test = get_data_from_csv("test.csv")
-    for i in range(5):
-        classifier.fit(X_train, y_train)
-        acc = classifier.predict(X_test, y_test)
-        accuracy.append(acc)
-        if verbose:
-            print(f"----------- Round {i + 1} -----------")
-            print(f"Accuracy for KNN={acc}")
-        improved_classifier.fit(X_train, y_train)
-        acc = improved_classifier.predict(X_test, y_test)
-        improved_accuracy.append(acc)
-        if verbose:
-            print(f"Accuracy for ImprovedKNN={acc}")
-    regular = sum(accuracy) / len(accuracy)
-    improved = sum(improved_accuracy) / len(improved_accuracy)
-    improvement = improved - regular
-    if verbose:
-        iterations = [i for i in range(iterations)]
-        plt.xlabel("Fold number")
-        plt.ylabel("Accuracy of that fold")
-        plt.plot(iterations, accuracy, label="KNNForest")
-        plt.plot(iterations, improved_accuracy, label="ImprovedKNNForest")
-        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', borderaxespad=0.)
-        plt.show()
-        print("------------------- Final Results ------------------")
-        print(f"The average accuracy of KNNForest is {regular}")
-        print(f"The average accuracy of ImprovedKNNForest is {improved}")
-        print(f"The new improved KNN algorithm is {(improved - regular) * 100}% better")
-    return improvement, improved, regular
-
-
 if __name__ == "__main__":
-
+    # in the main part, first we get tha data from csv files, after that we create a ImprovedKNNForestClassifier,
+    # then fit the classifier. in the end we predict in test data set and printing the accuracy of this classifier
     train_x, train_y = get_data_from_csv("train.csv")
     test_x, test_y = get_data_from_csv("test.csv")
-    kfold_x, kfold_y = get_data_from_csv("kfold.csv")
-    experiment(train_x, train_y, verbose=True, N=15, k=9, iterations=5)
-
-    # empty
+    classifier = ImprovedKNNForestClassifier()
+    classifier.fit(train_x, train_y)
+    res_accuracy = classifier.predict(test_x, test_y)
+    print(res_accuracy)
