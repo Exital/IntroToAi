@@ -15,7 +15,7 @@ class ID3CostSensitiveClassifier(ID3Classifier):
         self.cost_FN = cost_fn
         self.cost_FP = cost_fp
 
-    def fit(self, x, y, test_size=0.6):
+    def fit(self, x, y, test_size=0.43):
         """
         Builds an ID3Tree and than prune it to improve costs
         :param x: dataset
