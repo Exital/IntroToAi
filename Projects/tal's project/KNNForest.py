@@ -6,6 +6,16 @@ import argparse
 import numpy as np
 
 
+def get_centroid(data):
+    centroid = data.copy()
+    centroid = centroid.mean(axis=0)
+    return centroid
+
+
+def distance(v1, v2):
+    return np.linalg.norm(v1 - v2)
+
+
 class KNNForestClassifier(AbstractClassifier):
     def __init__(self, N=25, k=11):
         super().__init__()
@@ -15,50 +25,41 @@ class KNNForestClassifier(AbstractClassifier):
         self.forest = []
         self.centroids = []
 
+    def split_data(self, x, y):
+        data_splits = []
+        test_sizes = [random.uniform(self.prob_range[0], self.prob_range[1]) for i in range(self.N)]
+        for size in test_sizes:
+            X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=size)
+            train_x = X_train.copy()
+            train_x["diagnosis"] = y_train
+            centroid = get_centroid(train_x)
+            tup = train_x, centroid
+            data_splits.append(tup)
+        return data_splits
+
     def fit(self, x, y):
-        # clear those lists every time we fit!
-        self.forest = []
-        self.centroids = []
-        n = len(x.index)
-        for i in range(self.N):
-            start, stop = self.prob_range
-            portion = random.uniform(start, stop)
-            test_size = 1 - ((n * portion) / n)
-            X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=test_size)
-            train_data = X_train.copy()
-            train_data["diagnosis"] = y_train
-            self.forest.append(ID3Node(data=train_data))
-            centroid = train_data.copy()
-            centroid = centroid.mean(axis=0)
-            self.centroids.append(centroid)
+        data_splits = self.split_data(x, y)
+        self.forest = [(ID3Node(data=data), centroid) for (data, centroid) in data_splits]
 
     def predict(self, x, y):
-        test_centroid = x.copy()
-        test_centroid = test_centroid.mean(axis=0)
-        distances = []
-        for tree, centroid in zip(self.forest, self.centroids):
-            dist = (np.linalg.norm(centroid - test_centroid))
-            value = tree, dist
-            distances.append(value)
-        distances.sort(key=lambda val: val[1])
-        distances = distances[:self.k]
         data = x.copy()
         data["diagnosis"] = y
+        test_centroid = get_centroid(data)
+        knn_trees = [(tree, distance(test_centroid, centroid)) for (tree, centroid) in self.forest]
+        knn_trees.sort(key=lambda val: val[1])
+        knn_trees = [tree for (tree, dist) in knn_trees]
+        knn_trees = knn_trees[:self.k]
         right_predictions, false_positive, false_negative = 0, 0, 0
-        num_of_samples = len(data.index)
         for row in range(len(data.index)):
-            predictions = []
-            for tree, _ in distances:
-                prediction = self.walk_the_tree(tree, row, data)
-                predictions.append(prediction)
-            most_common = max(set(predictions), key=predictions.count)
-            if most_common == data["diagnosis"].iloc[row]:
+            predictions = [self.walk_the_tree(tree, row, data) for tree in knn_trees]
+            final_prediction = max(set(predictions), key=predictions.count)
+            if final_prediction == data["diagnosis"].iloc[row]:
                 right_predictions += 1
+            elif final_prediction == "M":
+                false_positive += 1
             else:
-                if most_common == "M":
-                    false_positive += 1
-                else:
-                    false_negative += 1
+                false_negative += 1
+        num_of_samples = len(data.index)
         acc = right_predictions / num_of_samples
         loss = (0.1 * false_positive + false_negative) / num_of_samples
         return acc, loss
