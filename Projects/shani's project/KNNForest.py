@@ -111,7 +111,6 @@ class KNNForestClassifier:
         # check each row in data
         for cur_row in range(len(val_data.index)):
             results_predicts = []
-            temp_values_list = []
             for i_tree, _ in all_dist:
                 pred_to_add = tour_tree(i_tree, cur_row, val_data)
                 temp_values = (pred_to_add, i_tree)
@@ -136,5 +135,5 @@ if __name__ == "__main__":
     res_accuracy = classifier.predict(test_x, test_y)
     print(res_accuracy)
 
-    # TODO print the Maximum accuracy value
+    # TODO uncomment it to print the Maximum accuracy value
     # print(f"Maximum accuracy is {res_accuracy}")

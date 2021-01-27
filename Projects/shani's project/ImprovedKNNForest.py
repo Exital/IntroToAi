@@ -42,15 +42,16 @@ class ImprovedKNNForestClassifier:
         self.size_test = 0.33
         self.normalization_values = []
         self.weights = [('radius_mean', 0.0), ('texture_mean', 0.0), ('perimeter_mean', 0.0), ('area_mean', 0.0),
-           ('smoothness_mean', 0.0), ('compactness_mean', 0.0), ('concavity_mean', 0.0026470588235294108),
-           ('concave points_mean', 0.0), ('symmetry_mean', 0.0), ('fractal_dimension_mean', 0.0), ('radius_se', 0.0),
-           ('texture_se', 0.0), ('perimeter_se', 0.0), ('area_se', 0.0), ('smoothness_se', 0.0),
-           ('compactness_se', 0.0), ('concavity_se', 0.005797101449275362),
-           ('concave points_se', 0.0002941176470588239), ('symmetry_se', 0.0), ('fractal_dimension_se', 0.0),
-           ('radius_worst', 0.0), ('texture_worst', 0.0005839727195225922), ('perimeter_worst', 0.01130861040068201),
-           ('area_worst', 0.0), ('smoothness_worst', 0.0), ('compactness_worst', 0.0),
-           ('concavity_worst', 0.00823529411764706), ('concave points_worst', 0.013989769820971864),
-           ('symmetry_worst', 0.0034782608695652175), ('fractal_dimension_worst', 0.002941176470588233)]
+                        ('smoothness_mean', 0.0), ('compactness_mean', 0.0), ('concavity_mean', 0.0),
+                        ('concave points_mean', 0.0), ('symmetry_mean', 0.0), ('fractal_dimension_mean', 0.0),
+                        ('radius_se', 0.0), ('texture_se', 0.0), ('perimeter_se', 0.0), ('area_se', 0.0),
+                        ('smoothness_se', 0.0), ('compactness_se', 0.002941176470588225),
+                        ('concavity_se', 0.011679454390451838), ('concave points_se', 0.002941176470588247),
+                        ('symmetry_se', 0.0), ('fractal_dimension_se', 0.0), ('radius_worst', 0.0),
+                        ('texture_worst', 0.0058397271952258965), ('perimeter_worst', 0.0203324808184143),
+                        ('area_worst', 0.0), ('smoothness_worst', 0.0), ('compactness_worst', 0.0),
+                        ('concavity_worst', 0.002941176470588225), ('concave points_worst', 0.008695652173913038),
+                        ('symmetry_worst', 0.00869565217391306), ('fractal_dimension_worst', 0.002941176470588247)]
 
     def fit(self, x, y):
         """
@@ -144,7 +145,7 @@ class ImprovedKNNForestClassifier:
         :param splits: number of splits
         :return: The weights
         """
-        weights = []
+        weights_list = []
         features = x.keys().tolist()
         for f in features:
             kf = KFold(n_splits=splits, random_state=204512396, shuffle=True)
@@ -155,19 +156,19 @@ class ImprovedKNNForestClassifier:
                 classifier = ID3Classifier()
                 classifier.fit(train_x, train_y)
                 # calculate original accuracy
-                acc_first, _ = classifier.predict(test_x, test_y)
+                _, acc_first = classifier.predict(test_x, test_y)
                 train_x_data = train_x.copy()
                 train_x_data[f] = np.random.permutation(train_x_data[f])
                 data_permute = train_x_data
                 classifier.fit(data_permute, train_y)
                 # calculate new accuracy
-                second_acc, _ = classifier.predict(test_x, test_y)
+                _, second_acc = classifier.predict(test_x, test_y)
                 error = abs(acc_first - second_acc)
                 mistakes.append(error)
             avg_m = sum(mistakes) / len(mistakes)
             w = f, avg_m
-            weights.append(w)
-        return weights
+            weights_list.append(w)
+        return weights_list
 
     def weighted_distance(self, centroid1, centroid2):
         """
@@ -203,3 +204,8 @@ if __name__ == "__main__":
     classifier.fit(train_x, train_y)
     res_accuracy = classifier.predict(test_x, test_y)
     print(res_accuracy)
+
+    # TODO to get values of weights pleas uncomment the next 3 lines
+    # list = []
+    # list = classifier.calculate_significance_features(train_x, train_y)
+    # print(list)
