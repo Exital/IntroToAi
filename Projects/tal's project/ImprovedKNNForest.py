@@ -333,52 +333,6 @@ def compute_feature_importance(X, y, splits=5):
     return normalized_weights
 
 
-def find_hyperparameters_for_forest(X, y, splits=5, n_values=None, k_values=None, p_values=None):
-    # assign default test values
-    if n_values is None:
-        n_values = [x for x in range(20, 30)]
-    if k_values is None:
-        k_values = [x for x in range(7, 25, 2)]
-    if p_values is None:
-        p_values = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8]
-
-    best_hypers = []
-    best_acc = float('-inf')
-    print(f"---------------- starting a test to find hyper params -------------------")
-    print(f"N values={n_values}")
-    print(f"k values={k_values}")
-    print(f"p values={p_values}")
-    for n in n_values:
-        for k in k_values:
-            if k >= n:
-                break
-            for p in p_values:
-                accuracies = []
-                classifier = ImprovedKNNForestClassifier(N=n, k=k, p=p)
-                kf = KFold(n_splits=splits, random_state=307965806, shuffle=True)
-                for train_index, test_index in kf.split(X):
-                    X_train, X_test = X.iloc[train_index], X.iloc[test_index]
-                    y_train, y_test = y.iloc[train_index], y.iloc[test_index]
-
-                    classifier.fit(X_train, y_train)
-                    accuracy, _ = classifier.predict(X_test, y_test)
-
-                    accuracies.append(accuracy)
-                avg = sum(accuracies) / len(accuracies)
-                print(f"N={n}, k={k}, p={p}: accuracy={avg}")
-                if avg == best_acc:
-                    value = (n, k, p)
-                    best_hypers.append(value)
-                if avg > best_acc:
-                    best_hypers = []
-                    value = (n, k, p)
-                    best_hypers.append(value)
-                    best_acc = avg
-        print(f"Best values for N={n} are {best_hypers} with accuracy={best_acc}")
-    print(f"------------ test results -------------")
-    print(f"The best hyper params are {best_hypers} with accuracy of {best_acc}")
-
-
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
@@ -389,8 +343,7 @@ if __name__ == "__main__":
                         action='store_true', help="Running a kfold test to show improvement")
     parser.add_argument('-iteration_experiment', dest="iteration_experiment",
                         action='store_true', help="Running an iteration test to show improvement")
-    parser.add_argument('-find_hyper', dest="find_hyper",
-                        action='store_true', help="Running kfold test to find hyper params")
+
 
     args = parser.parse_args()
 
@@ -409,7 +362,3 @@ if __name__ == "__main__":
     # Todo - to run an iteration experiment to see improvement run ImprovedKNNForest.py with -iteration_experiment flag.
     if args.iteration_experiment:
         iteration_experiment(train_x, train_y, test_x, test_y, iterations=5)
-
-    # Todo - to run a kfold experiment to find hyper params run ImprovedKNNForest.py with -find_hyper flag.
-    if args.find_hyper:
-        find_hyperparameters_for_forest(train_x, train_y, splits=5)
