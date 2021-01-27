@@ -27,7 +27,7 @@ class KNNForestClassifier(AbstractClassifier):
 
     def split_data(self, x, y):
         data_splits = []
-        test_sizes = [random.uniform(self.prob_range[0], self.prob_range[1]) for i in range(self.N)]
+        test_sizes = [1 - random.uniform(self.prob_range[0], self.prob_range[1]) for i in range(self.N)]
         for size in test_sizes:
             X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=size)
             train_x = X_train.copy()
