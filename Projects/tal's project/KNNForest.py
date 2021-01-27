@@ -61,7 +61,7 @@ class KNNForestClassifier(AbstractClassifier):
         else:
             test_sizes = [1 - self.p for i in range(self.N)]
         for size in test_sizes:
-            X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=size)
+            X_train, _, y_train, _ = train_test_split(x, y, test_size=size)
             train_x = X_train.copy()
             train_x["diagnosis"] = y_train
             centroid = get_centroid(train_x)

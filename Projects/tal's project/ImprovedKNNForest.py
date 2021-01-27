@@ -1,7 +1,7 @@
 from utils import csv2xy, AbstractClassifier, WEIGHTS
 import argparse
 import matplotlib.pyplot as plt
-from KNNForest import KNNForestClassifier
+from KNNForest import KNNForestClassifier, get_centroid
 from ID3 import ID3Node, ID3Classifier
 from sklearn.model_selection import train_test_split, KFold
 import random
@@ -83,18 +83,13 @@ def distance(v1, v2, weighted=False):
         return np.linalg.norm(v1_weighted - v2_weighted)
 
 
-class ImprovedKNNForestClassifier(AbstractClassifier):
+class ImprovedKNNForestClassifier(KNNForestClassifier):
     """
     This is a classifier that uses the regular KNNForestClassifier but normalizes the data before it uses it.
     """
     def __init__(self, N=25, k=11, p=None):
+        super().__init__(N, k, p)
         self.scaling_consts = []
-        self.prob_range = 0.3, 0.32
-        self.N = N
-        self.k = k
-        self.p = p
-        self.forest = []
-        self.centroids = []
 
     def fit_scaling(self, x):
         """
@@ -104,15 +99,12 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         :return: a normalized dataframe
         :rtype: dataframe
         """
-        self.scaling_consts = []
         features = x.keys().tolist()
         x_scaled = x.copy()
-        for feature in features:
-            mean_val, std_val = x_scaled[feature].mean(), x_scaled[feature].std()
-            scaling_const = feature, mean_val, std_val
-            # saving the values in order to normalize predict data
-            self.scaling_consts.append(scaling_const)
-            x_scaled[feature] = scalar(x_scaled[feature], mean_val, std_val)
+        # saving values for scaling
+        self.scaling_consts = [(feature, x_scaled[feature].mean(), x_scaled[feature].std()) for feature in features]
+        for feature, mean, std in self.scaling_consts:
+            x_scaled[feature] = scalar(x_scaled[feature], mean, std)
         return x_scaled
 
     def predict_scaling(self, x):
@@ -138,24 +130,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         :type y: dataframe
         """
         scaled_x = self.fit_scaling(x)
-        scaled_x = scaled_x
-        self.forest = []
-        self.centroids = []
-        n = len(scaled_x.index)
-        for i in range(self.N):
-            if self.p is None:
-                start, stop = self.prob_range
-                portion = random.uniform(start, stop)
-            else:
-                portion = self.p
-            test_size = 1 - ((n * portion) / n)
-            X_train, X_test, y_train, y_test = train_test_split(scaled_x, y, test_size=test_size)
-            train_data = X_train.copy()
-            train_data["diagnosis"] = y_train
-            self.forest.append(ID3Node(data=train_data))
-            centroid = train_data.copy()
-            centroid = centroid.mean(axis=0)
-            self.centroids.append(centroid)
+        super().fit(scaled_x, y)
 
     def predict(self, x, y):
         """
@@ -167,31 +142,24 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
         :return: (accuracy, loss)
         :rtype: tuple
         """
+        # ---------------- new solution ----------------------
         scaled_x = self.predict_scaling(x)
-        scaled_x = scaled_x
         data = scaled_x.copy()
         data["diagnosis"] = y
         right_predictions, false_positive, false_negative = 0, 0, 0
-        num_of_samples = len(data.index)
         for row in range(len(data.index)):
-            distances = []
-            sample = data.iloc[[row]].copy()
-            sample = remove_feature(sample, ["diagnosis"])
-            sample = sample.mean(axis=0)
-            for tree, centroid in zip(self.forest, self.centroids):
-                dist = distance(centroid, sample, weighted=True)
-                value = tree, dist
-                distances.append(value)
-            distances.sort(key=lambda val: val[1])
-            distances = distances[:self.k]
-            sick, healthy = 0, 0
-            for tree, dist in distances:
-                prediction = self.walk_the_tree(tree, row, data)
-                if prediction == "M":
-                    sick += e ** -dist
+            row_centroid = get_centroid(data.iloc[[row]].copy())
+            knn_trees = [(tree, distance(row_centroid, centroid, weighted=True)) for (tree, centroid) in self.forest]
+            knn_trees.sort(key=lambda val: val[1])
+            knn_trees = knn_trees[:self.k]
+            predictions = [(self.walk_the_tree(tree, row, data), e ** -dist) for (tree, dist) in knn_trees]
+            m_grade, b_grade = 0, 0
+            for diag, grade in predictions:
+                if diag == "M":
+                    m_grade += grade
                 else:
-                    healthy += e ** -dist
-            prediction = "M" if sick >= healthy else "B"
+                    b_grade += grade
+            prediction = "M" if m_grade > b_grade else "B"
             if prediction == data["diagnosis"].iloc[row]:
                 right_predictions += 1
             else:
@@ -199,6 +167,7 @@ class ImprovedKNNForestClassifier(AbstractClassifier):
                     false_positive += 1
                 else:
                     false_negative += 1
+        num_of_samples = len(data.index)
         acc = right_predictions / num_of_samples
         loss = (0.1 * false_positive + false_negative) / num_of_samples
         return acc, loss
@@ -344,9 +313,7 @@ if __name__ == "__main__":
     parser.add_argument('-iteration_experiment', dest="iteration_experiment",
                         action='store_true', help="Running an iteration test to show improvement")
 
-
     args = parser.parse_args()
-
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
