@@ -1,10 +1,9 @@
-from utils import csv2xy, AbstractClassifier, WEIGHTS
+from utils import csv2xy, WEIGHTS
 import argparse
 import matplotlib.pyplot as plt
 from KNNForest import KNNForestClassifier, get_centroid
-from ID3 import ID3Node, ID3Classifier
-from sklearn.model_selection import train_test_split, KFold
-import random
+from ID3 import ID3Classifier
+from sklearn.model_selection import KFold
 import numpy as np
 from math import e
 
@@ -87,7 +86,7 @@ class ImprovedKNNForestClassifier(KNNForestClassifier):
     """
     This is a classifier that uses the regular KNNForestClassifier but normalizes the data before it uses it.
     """
-    def __init__(self, N=25, k=11, p=None):
+    def __init__(self, N=25, k=11, p=0.3):
         super().__init__(N, k, p)
         self.scaling_consts = []
 
@@ -134,7 +133,7 @@ class ImprovedKNNForestClassifier(KNNForestClassifier):
 
     def predict(self, x, y):
         """
-        The predict function which will scale the data and then use the regular predictions.
+        The predict function which will scale the data and then predict the test samples using distances and weights.
         :param x: the data to be predicted on
         :type x: dataframe
         :param y: the labels of that data
@@ -142,7 +141,6 @@ class ImprovedKNNForestClassifier(KNNForestClassifier):
         :return: (accuracy, loss)
         :rtype: tuple
         """
-        # ---------------- new solution ----------------------
         scaled_x = self.predict_scaling(x)
         data = scaled_x.copy()
         data["diagnosis"] = y
@@ -273,7 +271,7 @@ def compute_feature_importance(X, y, splits=5):
     weights = []
     features = X.keys().tolist()
     print(f"---------------- starting features weights computation ---------------")
-    for feature in features:
+    for round, feature in enumerate(features, 1):
         errors = []
         kf = KFold(n_splits=splits, random_state=307965806, shuffle=True)
         for train_index, test_index in kf.split(X):
@@ -293,10 +291,11 @@ def compute_feature_importance(X, y, splits=5):
         avg_error = sum(errors) / len(errors)
         weight = feature, avg_error
         weights.append(weight)
+        print(f"Feature={feature}, weight={avg_error} [{round}/{len(features)}]")
     sorted_weights = sorted(weights, key=lambda x: x[1], reverse=True)
     max_weight = sorted_weights[0]
     max_error = max_weight[1]
-    normalized_weights = [(feature, error / max_error) for feature, error in weights]
+    normalized_weights = dict([(feature, error / max_error) for feature, error in weights])
     print("------------ Feature's weights -------------")
     print(normalized_weights)
     return normalized_weights
@@ -314,9 +313,22 @@ if __name__ == "__main__":
                         action='store_true', help="Running an iteration test to show improvement")
 
     args = parser.parse_args()
+
     # retrieving the data from the csv files
     train_x, train_y = csv2xy("train.csv")
     test_x, test_y = csv2xy("test.csv")
+    # creating a classifier instance
+    classifier = ImprovedKNNForestClassifier()
+    # fitting the classifier
+    classifier.fit(train_x, train_y)
+    # predicting on the test data set
+    accuracy, loss = classifier.predict(test_x, test_y)
+
+    if args.verbose:
+        print(f"The accuracy for KNNForest={accuracy}")
+        print(f"The loss for KNNForest={loss}")
+    else:
+        print(accuracy)
 
     # Todo - in order to compute feature weights run ImprovedKNNForest.py with -feature_weights flag.
     if args.feature_weights:
