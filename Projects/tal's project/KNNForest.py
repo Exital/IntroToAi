@@ -7,16 +7,35 @@ import numpy as np
 
 
 def get_centroid(data):
+    """
+    This function takes a dataframe and return its mean
+    :param data: the data dataframe
+    :type data: dataframe
+    :return: a centroid
+    :rtype: series
+    """
     centroid = data.copy()
     centroid = centroid.mean(axis=0)
     return centroid
 
 
 def distance(v1, v2):
+    """
+    regular euclidean distance
+    :param v1: a vector
+    :type v1: series
+    :param v2: a vector
+    :type v2: series
+    :return: the euclidean distance between them
+    :rtype: float
+    """
     return np.linalg.norm(v1 - v2)
 
 
 class KNNForestClassifier(AbstractClassifier):
+    """
+    A classifier that utilizes N trees and decides the prediction by the KNN algorithem.
+    """
     def __init__(self, N=25, k=11, p=None):
         super().__init__()
         self.p = p
@@ -27,6 +46,15 @@ class KNNForestClassifier(AbstractClassifier):
         self.centroids = []
 
     def split_data(self, x, y):
+        """
+        that function splits the data to the forest trees
+        :param x: data
+        :type x: dataframe
+        :param y: labels
+        :type y: dataframe
+        :return: a list of data, centroid of data
+        :rtype: list
+        """
         data_splits = []
         if self.p is None:
             test_sizes = [1 - random.uniform(self.prob_range[0], self.prob_range[1]) for i in range(self.N)]
