@@ -326,8 +326,8 @@ if __name__ == "__main__":
     accuracy, loss = classifier.predict(test_x, test_y)
 
     if args.verbose:
-        print(f"The accuracy for KNNForest={accuracy}")
-        print(f"The loss for KNNForest={loss}")
+        print(f"The accuracy for ImprovedKNNForest={accuracy}")
+        print(f"The loss for ImprovedKNNForest={loss}")
     else:
         print(accuracy)
 
