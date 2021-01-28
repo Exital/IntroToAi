@@ -412,7 +412,7 @@ def experiment(x=None, y=None, m_values=None, graph=False):
     if x is None or y is None:
         x, y = get_data_from_csv("train.csv")
     if m_values is None:
-        m_values = [i for i in range(0, 50, 2)]
+        m_values = [i for i in range(0, 30)]
 
     accuracy_split_values = []
     num_splits = 5
@@ -437,8 +437,6 @@ def experiment(x=None, y=None, m_values=None, graph=False):
         # zipped.sort(key=lambda x: x[1], reverse=True)
         # best_value_m = zipped[0]
         # print(f"Best M value is {best_value_m[0]}")
-        # printing to part 3.3
-        # print(f"Best M value is {best_value_m[0]} and the result is {best_value_m[1]}")
 
 
 if __name__ == "__main__":
